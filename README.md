@@ -42,19 +42,11 @@ npm install -g claude-limitline
 
 ### From Source
 
-```bash
-git clone https://github.com/tylergraydev/claude-limitline.git
-cd claude-limitline
-npm install
-npm run build
-npm link
-```
+See [Development](#development) section, then run `npm link` to make it available globally.
 
 ## Quick Start
 
-The easiest way to use claude-limitline is to add it directly to your Claude Code settings.
-
-**Add to your Claude Code settings file** (`~/.claude/settings.json`):
+Add to your Claude Code settings file (`~/.claude/settings.json`):
 
 ```json
 {
@@ -67,47 +59,7 @@ The easiest way to use claude-limitline is to add it directly to your Claude Cod
 
 That's it! The status line will now show your usage limits in Claude Code.
 
-### Full Settings Example
-
-Here's a complete example with other common settings:
-
-```json
-{
-  "permissions": {
-    "defaultMode": "default"
-  },
-  "statusLine": {
-    "type": "command",
-    "command": "npx claude-limitline"
-  }
-}
-```
-
-### Global Install (faster startup)
-
-```bash
-npm install -g claude-limitline
-```
-
-Then update your settings:
-
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "claude-limitline"
-  }
-}
-```
-
-### Test It
-
-Run standalone to verify it's working:
-
-```bash
-# Simulate Claude Code hook data
-echo '{"model":{"id":"claude-opus-4-5-20251101"}}' | npx claude-limitline
-```
+> **Tip:** For faster startup, use `"command": "claude-limitline"` after installing globally.
 
 ## Configuration
 
@@ -214,34 +166,38 @@ claude-limitline retrieves data from two sources:
 
 ## Development
 
-### Setup
-
 ```bash
 git clone https://github.com/tylergraydev/claude-limitline.git
 cd claude-limitline
 npm install
+npm run build    # Build once
+npm run dev      # Watch mode
 ```
 
-### Build
+## Testing
+
+The project uses [Vitest](https://vitest.dev/) for testing with 155 tests covering config loading, themes, segments, utilities, and rendering.
 
 ```bash
-npm run build
+npm test              # Run tests once
+npm run test:watch    # Watch mode
+npm run test:coverage # Coverage report
 ```
 
-### Development Mode (watch)
+### Test Structure
 
-```bash
-npm run dev
-```
-
-### Run Locally
-
-```bash
-node dist/index.js
-
-# With simulated hook data
-echo '{"model":{"id":"claude-opus-4-5-20251101"}}' | node dist/index.js
-```
+| File | Tests | Coverage |
+|------|-------|----------|
+| `src/config/loader.test.ts` | 7 | Config loading, merging, fallbacks |
+| `src/themes/index.test.ts` | 37 | Theme retrieval, color validation |
+| `src/segments/block.test.ts` | 8 | Block segment, time calculations |
+| `src/segments/weekly.test.ts` | 10 | Weekly segment, week progress |
+| `src/utils/oauth.test.ts` | 10 | API responses, caching |
+| `src/utils/claude-hook.test.ts` | 21 | Model name formatting |
+| `src/utils/environment.test.ts` | 20 | Git branch, directory detection |
+| `src/utils/terminal.test.ts` | 13 | Terminal width, ANSI handling |
+| `src/utils/logger.test.ts` | 8 | Debug/error logging |
+| `src/renderer.test.ts` | 21 | Segment rendering, ordering |
 
 ## Debug Mode
 
