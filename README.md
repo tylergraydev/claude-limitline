@@ -42,19 +42,11 @@ npm install -g claude-limitline
 
 ### From Source
 
-```bash
-git clone https://github.com/tylergraydev/claude-limitline.git
-cd claude-limitline
-npm install
-npm run build
-npm link
-```
+See [Development](#development) section, then run `npm link` to make it available globally.
 
 ## Quick Start
 
-The easiest way to use claude-limitline is to add it directly to your Claude Code settings.
-
-**Add to your Claude Code settings file** (`~/.claude/settings.json`):
+Add to your Claude Code settings file (`~/.claude/settings.json`):
 
 ```json
 {
@@ -67,47 +59,7 @@ The easiest way to use claude-limitline is to add it directly to your Claude Cod
 
 That's it! The status line will now show your usage limits in Claude Code.
 
-### Full Settings Example
-
-Here's a complete example with other common settings:
-
-```json
-{
-  "permissions": {
-    "defaultMode": "default"
-  },
-  "statusLine": {
-    "type": "command",
-    "command": "npx claude-limitline"
-  }
-}
-```
-
-### Global Install (faster startup)
-
-```bash
-npm install -g claude-limitline
-```
-
-Then update your settings:
-
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "claude-limitline"
-  }
-}
-```
-
-### Test It
-
-Run standalone to verify it's working:
-
-```bash
-# Simulate Claude Code hook data
-echo '{"model":{"id":"claude-opus-4-5-20251101"}}' | npx claude-limitline
-```
+> **Tip:** For faster startup, use `"command": "claude-limitline"` after installing globally.
 
 ## Configuration
 
@@ -214,33 +166,12 @@ claude-limitline retrieves data from two sources:
 
 ## Development
 
-### Setup
-
 ```bash
 git clone https://github.com/tylergraydev/claude-limitline.git
 cd claude-limitline
 npm install
-```
-
-### Build
-
-```bash
-npm run build
-```
-
-### Development Mode (watch)
-
-```bash
-npm run dev
-```
-
-### Run Locally
-
-```bash
-node dist/index.js
-
-# With simulated hook data
-echo '{"model":{"id":"claude-opus-4-5-20251101"}}' | node dist/index.js
+npm run build    # Build once
+npm run dev      # Watch mode
 ```
 
 ## Debug Mode
