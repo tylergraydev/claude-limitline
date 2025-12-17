@@ -8,6 +8,7 @@ import { getEnvironmentInfo } from "./utils/environment.js";
 import { readHookData } from "./utils/claude-hook.js";
 import { getUsageTrend } from "./utils/oauth.js";
 import { debug } from "./utils/logger.js";
+import { addSample } from "./utils/history.js";
 
 async function main(): Promise<void> {
   try {
@@ -44,6 +45,14 @@ async function main(): Promise<void> {
 
     debug("Block info:", JSON.stringify(blockInfo));
     debug("Weekly info:", JSON.stringify(weeklyInfo));
+
+    // Record usage sample for sparkline history
+    if (blockInfo?.percentUsed !== null || weeklyInfo?.percentUsed !== null) {
+      addSample(
+        blockInfo?.percentUsed ?? null,
+        weeklyInfo?.percentUsed ?? null
+      );
+    }
 
     // Get trend info for usage changes
     const trendInfo = config.showTrend ? getUsageTrend() : null;
