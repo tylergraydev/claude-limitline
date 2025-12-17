@@ -6,6 +6,8 @@ A powerline-style statusline for Claude Code showing real-time usage limits, git
 ![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)
 ![TypeScript](https://img.shields.io/badge/typescript-5.3-blue.svg)
 
+![Theme Preview](imgs/themes-preview.png)
+
 ## Features
 
 - **Powerline Style** - Beautiful segmented display with smooth transitions
