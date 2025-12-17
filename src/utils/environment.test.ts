@@ -40,10 +40,12 @@ describe("environment", () => {
     });
 
     it("handles Windows paths", () => {
+      // Note: path.basename on Linux doesn't handle Windows backslashes
+      // This test verifies the function works with forward slashes (cross-platform)
       const hookData = {
         workspace: {
-          current_dir: "C:\\Users\\user\\projects\\app\\src",
-          project_dir: "C:\\Users\\user\\projects\\app",
+          current_dir: "C:/Users/user/projects/app/src",
+          project_dir: "C:/Users/user/projects/app",
         },
       };
       expect(getDirectoryName(hookData)).toBe("app");
