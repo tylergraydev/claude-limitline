@@ -4,6 +4,8 @@ import { loadConfig } from "./config/index.js";
 import { BlockProvider } from "./segments/block.js";
 import { WeeklyProvider } from "./segments/weekly.js";
 import { Renderer } from "./renderer.js";
+import { getEnvironmentInfo } from "./utils/environment.js";
+import { readHookData } from "./utils/claude-hook.js";
 import { debug } from "./utils/logger.js";
 
 async function main(): Promise<void> {
@@ -11,6 +13,14 @@ async function main(): Promise<void> {
     // Load configuration
     const config = loadConfig();
     debug("Config loaded:", JSON.stringify(config));
+
+    // Read hook data from stdin (Claude Code passes this)
+    const hookData = await readHookData();
+    debug("Hook data:", JSON.stringify(hookData));
+
+    // Get environment info (repo name, git branch, model)
+    const envInfo = getEnvironmentInfo(hookData);
+    debug("Environment info:", JSON.stringify(envInfo));
 
     // Initialize providers
     const blockProvider = new BlockProvider();
@@ -36,7 +46,7 @@ async function main(): Promise<void> {
 
     // Render output
     const renderer = new Renderer(config);
-    const output = renderer.render(blockInfo, weeklyInfo);
+    const output = renderer.render(blockInfo, weeklyInfo, envInfo);
 
     if (output) {
       process.stdout.write(output);

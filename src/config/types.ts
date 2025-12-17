@@ -4,6 +4,10 @@ export interface SegmentConfig {
   barWidth?: number;
 }
 
+export interface SimpleSegmentConfig {
+  enabled: boolean;
+}
+
 export interface BlockSegmentConfig extends SegmentConfig {
   showTimeRemaining?: boolean;
 }
@@ -27,6 +31,9 @@ export interface DisplayConfig {
 
 export interface LimitlineConfig {
   display?: DisplayConfig;
+  directory?: SimpleSegmentConfig;  // Show repo/directory name
+  git?: SimpleSegmentConfig;        // Show git branch
+  model?: SimpleSegmentConfig;      // Show Claude model
   block?: BlockSegmentConfig;
   weekly?: WeeklySegmentConfig;
   budget?: BudgetConfig;
@@ -35,18 +42,27 @@ export interface LimitlineConfig {
 
 export const DEFAULT_CONFIG: LimitlineConfig = {
   display: {
-    style: "minimal",
+    style: "powerline",
     useNerdFonts: true,
+  },
+  directory: {
+    enabled: true,
+  },
+  git: {
+    enabled: true,
+  },
+  model: {
+    enabled: true,
   },
   block: {
     enabled: true,
-    displayStyle: "bar",
+    displayStyle: "text",
     barWidth: 10,
     showTimeRemaining: true,
   },
   weekly: {
     enabled: true,
-    displayStyle: "bar",
+    displayStyle: "text",
     barWidth: 10,
     showWeekProgress: true,
   },

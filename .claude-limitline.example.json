@@ -1,17 +1,26 @@
 {
   "display": {
-    "style": "minimal",
+    "style": "powerline",
     "useNerdFonts": true
+  },
+  "directory": {
+    "enabled": true
+  },
+  "git": {
+    "enabled": true
+  },
+  "model": {
+    "enabled": true
   },
   "block": {
     "enabled": true,
-    "displayStyle": "bar",
+    "displayStyle": "text",
     "barWidth": 10,
     "showTimeRemaining": true
   },
   "weekly": {
     "enabled": true,
-    "displayStyle": "bar",
+    "displayStyle": "text",
     "barWidth": 10,
     "showWeekProgress": true
   },

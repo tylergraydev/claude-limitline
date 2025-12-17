@@ -1,6 +1,6 @@
 # claude-limitline
 
-A statusline for Claude Code showing real-time usage limits and weekly tracking.
+A powerline-style statusline for Claude Code showing real-time usage limits, git info, and model details.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)
@@ -8,19 +8,27 @@ A statusline for Claude Code showing real-time usage limits and weekly tracking.
 
 ## Features
 
+- **Powerline Style** - Beautiful segmented display with smooth transitions
 - **5-Hour Block Limit** - Shows current usage percentage with time remaining until reset
 - **7-Day Rolling Limit** - Tracks weekly usage with progress indicator
-- **Real-time Tracking** - Uses Anthropic's OAuth usage API for accurate usage data
-- **Progress Bar Display** - Visual progress bars for quick status checks
+- **Repository Name** - Displays current project/directory name
+- **Git Branch** - Shows current branch with dirty indicator (●)
+- **Claude Model** - Displays the active model (Opus 4.5, Sonnet 4, etc.)
+- **Multiple Themes** - Dark, light, nord, gruvbox, tokyo-night, and rose-pine
+- **Real-time Tracking** - Uses Anthropic's OAuth usage API for accurate data
 - **Cross-Platform** - Works on Windows, macOS, and Linux
-- **Zero Runtime Dependencies** - Lightweight and fast
-- **Multiple Themes** - Dark, light, nord, and gruvbox themes included
+
+## Example Output
+
+```
+ claude-limitline  main ●   Opus 4.5   12% (3h20m)   45% (wk 85%)
+```
 
 ## Prerequisites
 
 - **Node.js** 18.0.0 or higher
 - **Claude Code** CLI installed and authenticated (for OAuth token)
-- **Nerd Font** (optional, for powerline symbols)
+- **Nerd Font** (recommended, for powerline symbols)
 
 ## Installation
 
@@ -40,21 +48,9 @@ npm run build
 npm link
 ```
 
-### Using Docker
-
-```bash
-# Build the image
-docker build -t claude-limitline .
-
-# Run (mount your .claude directory for OAuth token access)
-docker run --rm -v ~/.claude:/root/.claude claude-limitline
-```
-
 ## Quick Start
 
-The easiest way to use claude-limitline is to add it directly to your Claude Code settings.
-
-**Add to your Claude Code settings file** (`~/.claude/settings.json`):
+Add claude-limitline to your Claude Code settings file (`~/.claude/settings.json`):
 
 ```json
 {
@@ -65,27 +61,9 @@ The easiest way to use claude-limitline is to add it directly to your Claude Cod
 }
 ```
 
-That's it! The status line will now show your usage limits in Claude Code.
+That's it! The status line will now show in Claude Code.
 
-### Full Settings Example
-
-Here's a complete example with other common settings:
-
-```json
-{
-  "permissions": {
-    "defaultMode": "default"
-  },
-  "statusLine": {
-    "type": "command",
-    "command": "npx claude-limitline"
-  }
-}
-```
-
-### Alternative: Global Install
-
-If you prefer a global installation (slightly faster startup):
+### Global Install (faster startup)
 
 ```bash
 npm install -g claude-limitline
@@ -107,12 +85,8 @@ Then update your settings:
 Run standalone to verify it's working:
 
 ```bash
-npx claude-limitline
-```
-
-You should see output like:
-```
-⏳ ████████░░ 45% (2h 30m left) | 📅 ██████░░░░ 62% (wk 43%)
+# Simulate Claude Code hook data
+echo '{"model":{"id":"claude-opus-4-5-20251101"}}' | npx claude-limitline
 ```
 
 ## Configuration
@@ -122,18 +96,27 @@ Create a `.claude-limitline.json` file in your home directory (`~/.claude-limitl
 ```json
 {
   "display": {
-    "style": "minimal",
+    "style": "powerline",
     "useNerdFonts": true
+  },
+  "directory": {
+    "enabled": true
+  },
+  "git": {
+    "enabled": true
+  },
+  "model": {
+    "enabled": true
   },
   "block": {
     "enabled": true,
-    "displayStyle": "bar",
+    "displayStyle": "text",
     "barWidth": 10,
     "showTimeRemaining": true
   },
   "weekly": {
     "enabled": true,
-    "displayStyle": "bar",
+    "displayStyle": "text",
     "barWidth": 10,
     "showWeekProgress": true
   },
@@ -149,13 +132,16 @@ Create a `.claude-limitline.json` file in your home directory (`~/.claude-limitl
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `display.useNerdFonts` | Use Nerd Font symbols (⏳📅) vs ASCII | `true` |
+| `display.useNerdFonts` | Use Nerd Font symbols for powerline | `true` |
+| `directory.enabled` | Show repository/directory name | `true` |
+| `git.enabled` | Show git branch with dirty indicator | `true` |
+| `model.enabled` | Show Claude model name | `true` |
 | `block.enabled` | Show 5-hour block usage | `true` |
-| `block.displayStyle` | `"bar"` or `"text"` | `"bar"` |
+| `block.displayStyle` | `"bar"` or `"text"` | `"text"` |
 | `block.barWidth` | Width of progress bar in characters | `10` |
 | `block.showTimeRemaining` | Show time until block resets | `true` |
 | `weekly.enabled` | Show 7-day rolling usage | `true` |
-| `weekly.displayStyle` | `"bar"` or `"text"` | `"bar"` |
+| `weekly.displayStyle` | `"bar"` or `"text"` | `"text"` |
 | `weekly.barWidth` | Width of progress bar in characters | `10` |
 | `weekly.showWeekProgress` | Show week progress percentage | `true` |
 | `budget.pollInterval` | Minutes between API calls | `15` |
@@ -164,29 +150,39 @@ Create a `.claude-limitline.json` file in your home directory (`~/.claude-limitl
 
 ### Available Themes
 
-- `dark` - Default dark theme
-- `light` - Light background theme
+- `dark` - Default dark theme with warm browns and cool cyans
+- `light` - Light background theme with vibrant colors
 - `nord` - Nord color palette
 - `gruvbox` - Gruvbox color palette
+- `tokyo-night` - Tokyo Night color palette
+- `rose-pine` - Rosé Pine color palette
+
+## Segments
+
+The statusline displays the following segments (all configurable):
+
+| Segment | Description | Color (dark theme) |
+|---------|-------------|-------------------|
+| **Directory** | Current repo/project name | Brown/Orange |
+| **Git** | Branch name + dirty indicator (●) | Dark Gray |
+| **Model** | Claude model (Opus 4.5, Sonnet 4, etc.) | Dark Gray |
+| **Block** | 5-hour usage % + time remaining | Cyan (warning: Orange, critical: Red) |
+| **Weekly** | 7-day usage % + week progress | Green |
 
 ## How It Works
 
-claude-limitline retrieves your Claude usage data from Anthropic's OAuth usage API. It reads your OAuth token from:
+claude-limitline retrieves data from two sources:
+
+1. **Hook Data (stdin)** - Claude Code passes JSON with model info, workspace, and session data
+2. **Usage API** - Fetches usage limits from Anthropic's OAuth usage endpoint
+
+### OAuth Token Location
 
 | Platform | Location |
 |----------|----------|
 | **Windows** | Credential Manager or `~/.claude/.credentials.json` |
 | **macOS** | Keychain or `~/.claude/.credentials.json` |
 | **Linux** | secret-tool (GNOME Keyring) or `~/.claude/.credentials.json` |
-
-The usage data is cached locally to respect API rate limits. The cache duration is configurable via `budget.pollInterval` (default: 15 minutes).
-
-### API Response
-
-The tool queries Anthropic's usage endpoint which returns:
-
-- **5-hour block**: Usage percentage and reset time for the rolling 5-hour window
-- **7-day rolling**: Usage percentage and reset time for the rolling 7-day window
 
 ## Development
 
@@ -210,16 +206,13 @@ npm run build
 npm run dev
 ```
 
-### Type Checking
-
-```bash
-npm run typecheck
-```
-
 ### Run Locally
 
 ```bash
 node dist/index.js
+
+# With simulated hook data
+echo '{"model":{"id":"claude-opus-4-5-20251101"}}' | node dist/index.js
 ```
 
 ## Debug Mode
@@ -241,25 +234,22 @@ Debug output is written to stderr so it won't interfere with the status line out
 
 ## Troubleshooting
 
+### Model not showing
+
+The model is passed via stdin from Claude Code. If running standalone, pipe in hook data:
+```bash
+echo '{"model":{"id":"claude-opus-4-5-20251101"}}' | claude-limitline
+```
+
 ### "No data" or empty output
 
 1. **Check OAuth token**: Make sure you're logged into Claude Code (`claude --login`)
-2. **Check credentials file**: Verify `~/.claude/.credentials.json` exists and contains `claudeAiOauth.accessToken`
-3. **Enable debug mode**: Run with `CLAUDE_LIMITLINE_DEBUG=true` to see detailed logs
+2. **Check credentials file**: Verify `~/.claude/.credentials.json` exists
+3. **Enable debug mode**: Run with `CLAUDE_LIMITLINE_DEBUG=true`
 
-### Token not found
+### Git branch not showing
 
-The OAuth token is stored by Claude Code when you authenticate. Try:
-
-```bash
-# Re-authenticate with Claude Code
-claude --login
-```
-
-### API returns errors
-
-- Ensure your Claude subscription is active
-- Check if you've exceeded API rate limits (try increasing `pollInterval`)
+Make sure you're in a git repository. The git segment only appears when a `.git` directory is found.
 
 ## Contributing
 
