@@ -123,7 +123,7 @@ Create a `claude-limitline.json` file in your Claude config directory (`~/.claud
 | `weekly.displayStyle` | `"bar"` or `"text"` | `"text"` |
 | `weekly.barWidth` | Width of progress bar in characters | `10` |
 | `weekly.showWeekProgress` | Show week progress percentage | `true` |
-| `weekly.viewMode` | `"simple"`, `"detailed"`, or `"smart"` | `"simple"` |
+| `weekly.viewMode` | `"simple"` or `"smart"` | `"simple"` |
 | `budget.pollInterval` | Minutes between API calls | `15` |
 | `budget.warningThreshold` | Percentage to trigger warning color | `80` |
 | `theme` | Color theme name | `"dark"` |
@@ -132,15 +132,16 @@ Create a `claude-limitline.json` file in your Claude config directory (`~/.claud
 
 ### Weekly View Modes
 
-The weekly segment supports three view modes for displaying usage limits:
+The weekly segment supports two view modes for displaying usage limits:
+
+![Mode Preview](imgs/mode-preview.png)
 
 | Mode | Description | Example |
 |------|-------------|---------|
 | `simple` | Shows overall weekly usage only (default) | `○ 47% (wk 85%)` |
-| `detailed` | Shows overall, Opus, and Sonnet usage side by side | `○47% ◈15% ◇7%` |
-| `smart` | Shows the most restrictive (bottleneck) limit with indicator | `○47%▲ (wk 85%)` |
+| `smart` | Model-aware: shows Sonnet + Overall when using Sonnet | `◇7% \| ○47% (wk 85%)` |
 
-**Note:** Model-specific limits (Opus/Sonnet) are only available on certain subscription tiers. When a model-specific limit is not available, it will be hidden from the display.
+**Note:** Model-specific limits (Opus/Sonnet) are only available on certain subscription tiers. Smart mode shows only overall usage when using Opus/Haiku, and shows both Sonnet and overall when using Sonnet.
 
 ### Available Themes
 
@@ -190,7 +191,7 @@ npm run dev      # Watch mode
 
 ## Testing
 
-The project uses [Vitest](https://vitest.dev/) for testing with 166 tests covering config loading, themes, segments, utilities, and rendering.
+The project uses [Vitest](https://vitest.dev/) for testing with 164 tests covering config loading, themes, segments, utilities, and rendering.
 
 ```bash
 npm test              # Run tests once
@@ -205,13 +206,13 @@ npm run test:coverage # Coverage report
 | `src/config/loader.test.ts` | 7 | Config loading, merging, fallbacks |
 | `src/themes/index.test.ts` | 37 | Theme retrieval, color validation |
 | `src/segments/block.test.ts` | 8 | Block segment, time calculations |
-| `src/segments/weekly.test.ts` | 10 | Weekly segment, week progress |
-| `src/utils/oauth.test.ts` | 10 | API responses, caching |
+| `src/segments/weekly.test.ts` | 13 | Weekly segment, week progress |
+| `src/utils/oauth.test.ts` | 13 | API responses, caching, trends |
 | `src/utils/claude-hook.test.ts` | 21 | Model name formatting |
 | `src/utils/environment.test.ts` | 20 | Git branch, directory detection |
 | `src/utils/terminal.test.ts` | 13 | Terminal width, ANSI handling |
 | `src/utils/logger.test.ts` | 8 | Debug/error logging |
-| `src/renderer.test.ts` | 21 | Segment rendering, ordering |
+| `src/renderer.test.ts` | 24 | Segment rendering, ordering, view modes |
 
 ## Debug Mode
 
