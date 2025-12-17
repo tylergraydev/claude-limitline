@@ -16,6 +16,8 @@ interface UsageData {
 export interface OAuthUsageResponse {
   fiveHour: UsageData | null;
   sevenDay: UsageData | null;
+  sevenDayOpus: UsageData | null;
+  sevenDaySonnet: UsageData | null;
   raw?: unknown;
 }
 
@@ -27,6 +29,8 @@ interface ApiUsageBlock {
 interface ApiResponse {
   five_hour?: ApiUsageBlock;
   seven_day?: ApiUsageBlock;
+  seven_day_opus?: ApiUsageBlock | null;
+  seven_day_sonnet?: ApiUsageBlock | null;
 }
 
 async function getOAuthTokenWindows(): Promise<string | null> {
@@ -229,6 +233,8 @@ export async function fetchUsageFromAPI(
     return {
       fiveHour: parseUsageBlock(data.five_hour),
       sevenDay: parseUsageBlock(data.seven_day),
+      sevenDayOpus: parseUsageBlock(data.seven_day_opus ?? undefined),
+      sevenDaySonnet: parseUsageBlock(data.seven_day_sonnet ?? undefined),
       raw: data,
     };
   } catch (error) {
@@ -243,36 +249,42 @@ let previousUsage: OAuthUsageResponse | null = null;  // For trend tracking
 let cacheTimestamp = 0;
 let cachedToken: string | null = null;
 
+export type TrendDirection = "up" | "down" | "same" | null;
+
 export interface TrendInfo {
-  fiveHourTrend: "up" | "down" | "same" | null;
-  sevenDayTrend: "up" | "down" | "same" | null;
+  fiveHourTrend: TrendDirection;
+  sevenDayTrend: TrendDirection;
+  sevenDayOpusTrend: TrendDirection;
+  sevenDaySonnetTrend: TrendDirection;
 }
 
 export function getUsageTrend(): TrendInfo {
   const result: TrendInfo = {
     fiveHourTrend: null,
     sevenDayTrend: null,
+    sevenDayOpusTrend: null,
+    sevenDaySonnetTrend: null,
   };
 
   if (!cachedUsage || !previousUsage) {
     return result;
   }
 
-  // Compare five hour usage
-  if (cachedUsage.fiveHour && previousUsage.fiveHour) {
-    const diff = cachedUsage.fiveHour.percentUsed - previousUsage.fiveHour.percentUsed;
-    if (diff > 0.5) result.fiveHourTrend = "up";
-    else if (diff < -0.5) result.fiveHourTrend = "down";
-    else result.fiveHourTrend = "same";
-  }
+  const compareTrend = (
+    current: UsageData | null,
+    previous: UsageData | null
+  ): TrendDirection => {
+    if (!current || !previous) return null;
+    const diff = current.percentUsed - previous.percentUsed;
+    if (diff > 0.5) return "up";
+    if (diff < -0.5) return "down";
+    return "same";
+  };
 
-  // Compare seven day usage
-  if (cachedUsage.sevenDay && previousUsage.sevenDay) {
-    const diff = cachedUsage.sevenDay.percentUsed - previousUsage.sevenDay.percentUsed;
-    if (diff > 0.5) result.sevenDayTrend = "up";
-    else if (diff < -0.5) result.sevenDayTrend = "down";
-    else result.sevenDayTrend = "same";
-  }
+  result.fiveHourTrend = compareTrend(cachedUsage.fiveHour, previousUsage.fiveHour);
+  result.sevenDayTrend = compareTrend(cachedUsage.sevenDay, previousUsage.sevenDay);
+  result.sevenDayOpusTrend = compareTrend(cachedUsage.sevenDayOpus, previousUsage.sevenDayOpus);
+  result.sevenDaySonnetTrend = compareTrend(cachedUsage.sevenDaySonnet, previousUsage.sevenDaySonnet);
 
   return result;
 }

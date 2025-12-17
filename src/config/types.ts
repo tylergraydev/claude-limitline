@@ -12,8 +12,11 @@ export interface BlockSegmentConfig extends SegmentConfig {
   showTimeRemaining?: boolean;
 }
 
+export type WeeklyViewMode = "simple" | "detailed" | "smart";
+
 export interface WeeklySegmentConfig extends SegmentConfig {
   showWeekProgress?: boolean;
+  viewMode?: WeeklyViewMode;  // default "simple"
 }
 
 export interface BudgetConfig {
@@ -73,6 +76,7 @@ export const DEFAULT_CONFIG: LimitlineConfig = {
     displayStyle: "text",
     barWidth: 10,
     showWeekProgress: true,
+    viewMode: "simple",
   },
   budget: {
     pollInterval: 15,

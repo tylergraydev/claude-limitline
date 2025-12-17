@@ -7,6 +7,9 @@ export const SYMBOLS = {
   model: "\u2731",           // Heavy asterisk ✱
   block_cost: "\u25eb",      // White square with vertical bisecting line ◫
   weekly_cost: "\u25cb",     // Circle ○
+  opus_cost: "\u25c8",       // Diamond with dot ◈
+  sonnet_cost: "\u25c7",     // White diamond ◇
+  bottleneck: "\u25b2",      // Black up-pointing triangle ▲
   progress_full: "\u2588",   // Full block
   progress_empty: "\u2591",  // Light shade
 };
@@ -19,6 +22,9 @@ export const TEXT_SYMBOLS = {
   model: "*",
   block_cost: "BLK",
   weekly_cost: "WK",
+  opus_cost: "Op",
+  sonnet_cost: "So",
+  bottleneck: "*",
   progress_full: "#",
   progress_empty: "-",
 };

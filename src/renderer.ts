@@ -10,6 +10,9 @@ import { getTerminalWidth } from "./utils/terminal.js";
 interface SymbolSet {
   block: string;
   weekly: string;
+  opus: string;
+  sonnet: string;
+  bottleneck: string;
   rightArrow: string;
   separator: string;
   branch: string;
@@ -50,6 +53,9 @@ export class Renderer {
     this.symbols = {
       block: symbolSet.block_cost,
       weekly: symbolSet.weekly_cost,
+      opus: symbolSet.opus_cost,
+      sonnet: symbolSet.sonnet_cost,
+      bottleneck: symbolSet.bottleneck,
       rightArrow: symbolSet.right,
       separator: symbolSet.separator,
       branch: symbolSet.branch,
@@ -234,24 +240,21 @@ export class Renderer {
     };
   }
 
-  private renderWeekly(ctx: RenderContext): Segment | null {
-    if (!ctx.weeklyInfo || !this.config.weekly?.enabled) {
-      return null;
-    }
-
+  private renderWeeklySimple(ctx: RenderContext): Segment | null {
+    const info = ctx.weeklyInfo!;
     const icon = this.usePowerline ? this.symbols.weekly : "WK";
 
-    if (ctx.weeklyInfo.percentUsed === null) {
+    if (info.percentUsed === null) {
       return {
         text: ` ${icon} -- `,
         colors: this.theme.weekly,
       };
     }
 
-    const percent = ctx.weeklyInfo.percentUsed;
-    const displayStyle = this.config.weekly.displayStyle || "text";
-    const barWidth = this.config.weekly.barWidth || 10;
-    const showWeekProgress = this.config.weekly.showWeekProgress ?? true;
+    const percent = info.percentUsed;
+    const displayStyle = this.config.weekly?.displayStyle || "text";
+    const barWidth = this.config.weekly?.barWidth || 10;
+    const showWeekProgress = this.config.weekly?.showWeekProgress ?? true;
 
     // Get trend symbol
     const trend = this.getTrendSymbol(ctx.trendInfo?.sevenDayTrend ?? null);
@@ -267,13 +270,164 @@ export class Renderer {
 
     // Add week progress if enabled (skip in compact mode)
     if (showWeekProgress && !ctx.compact) {
-      text += ` (wk ${ctx.weeklyInfo.weekProgressPercent}%)`;
+      text += ` (wk ${info.weekProgressPercent}%)`;
     }
 
     return {
       text: ` ${icon} ${text} `,
       colors: this.theme.weekly,
     };
+  }
+
+  private renderWeeklyDetailed(ctx: RenderContext): Segment | null {
+    const info = ctx.weeklyInfo!;
+    const overallIcon = this.usePowerline ? this.symbols.weekly : "All";
+    const opusIcon = this.usePowerline ? this.symbols.opus : "Op";
+    const sonnetIcon = this.usePowerline ? this.symbols.sonnet : "So";
+
+    // Build parts for each available limit
+    const parts: string[] = [];
+
+    // Overall
+    if (info.percentUsed !== null) {
+      const trend = this.getTrendSymbol(ctx.trendInfo?.sevenDayTrend ?? null);
+      parts.push(`${overallIcon}${Math.round(info.percentUsed)}%${trend}`);
+    }
+
+    // Opus
+    if (info.opusPercentUsed !== null) {
+      const trend = this.getTrendSymbol(ctx.trendInfo?.sevenDayOpusTrend ?? null);
+      parts.push(`${opusIcon}${Math.round(info.opusPercentUsed)}%${trend}`);
+    }
+
+    // Sonnet
+    if (info.sonnetPercentUsed !== null) {
+      const trend = this.getTrendSymbol(ctx.trendInfo?.sevenDaySonnetTrend ?? null);
+      parts.push(`${sonnetIcon}${Math.round(info.sonnetPercentUsed)}%${trend}`);
+    }
+
+    if (parts.length === 0) {
+      return {
+        text: ` ${overallIcon} -- `,
+        colors: this.theme.weekly,
+      };
+    }
+
+    // In compact mode, use shorter separator
+    const separator = ctx.compact ? " " : " ";
+    const text = parts.join(separator);
+
+    // Use overall colors but could be enhanced with warning colors if any is high
+    const maxPercent = Math.max(
+      info.percentUsed ?? 0,
+      info.opusPercentUsed ?? 0,
+      info.sonnetPercentUsed ?? 0
+    );
+    const colors = this.getColorsForPercent(maxPercent, this.theme.weekly);
+
+    return {
+      text: ` ${text} `,
+      colors,
+    };
+  }
+
+  private renderWeeklySmart(ctx: RenderContext): Segment | null {
+    const info = ctx.weeklyInfo!;
+    const overallIcon = this.usePowerline ? this.symbols.weekly : "All";
+    const opusIcon = this.usePowerline ? this.symbols.opus : "Op";
+    const sonnetIcon = this.usePowerline ? this.symbols.sonnet : "So";
+
+    // Find the bottleneck (highest percentage)
+    interface LimitInfo {
+      name: string;
+      icon: string;
+      percent: number;
+      trend: "up" | "down" | "same" | null;
+      colors: SegmentColor;
+    }
+
+    const limits: LimitInfo[] = [];
+
+    if (info.percentUsed !== null) {
+      limits.push({
+        name: "all",
+        icon: overallIcon,
+        percent: info.percentUsed,
+        trend: ctx.trendInfo?.sevenDayTrend ?? null,
+        colors: this.theme.weekly,
+      });
+    }
+
+    if (info.opusPercentUsed !== null) {
+      limits.push({
+        name: "opus",
+        icon: opusIcon,
+        percent: info.opusPercentUsed,
+        trend: ctx.trendInfo?.sevenDayOpusTrend ?? null,
+        colors: this.theme.opus,
+      });
+    }
+
+    if (info.sonnetPercentUsed !== null) {
+      limits.push({
+        name: "sonnet",
+        icon: sonnetIcon,
+        percent: info.sonnetPercentUsed,
+        trend: ctx.trendInfo?.sevenDaySonnetTrend ?? null,
+        colors: this.theme.sonnet,
+      });
+    }
+
+    if (limits.length === 0) {
+      return {
+        text: ` ${overallIcon} -- `,
+        colors: this.theme.weekly,
+      };
+    }
+
+    // Find the bottleneck (highest percentage)
+    const bottleneck = limits.reduce((a, b) => (a.percent >= b.percent ? a : b));
+
+    const trend = this.getTrendSymbol(bottleneck.trend);
+    const bottleneckIndicator = limits.length > 1 ? this.symbols.bottleneck : "";
+
+    // Show percentage with bottleneck indicator
+    let text = `${bottleneck.icon}${Math.round(bottleneck.percent)}%${trend}`;
+    if (bottleneckIndicator && !ctx.compact) {
+      text += bottleneckIndicator;
+    }
+
+    // Add week progress if enabled and not compact
+    const showWeekProgress = this.config.weekly?.showWeekProgress ?? true;
+    if (showWeekProgress && !ctx.compact) {
+      text += ` (wk ${info.weekProgressPercent}%)`;
+    }
+
+    // Use colors based on bottleneck percentage
+    const colors = this.getColorsForPercent(bottleneck.percent, bottleneck.colors);
+
+    return {
+      text: ` ${text} `,
+      colors,
+    };
+  }
+
+  private renderWeekly(ctx: RenderContext): Segment | null {
+    if (!ctx.weeklyInfo || !this.config.weekly?.enabled) {
+      return null;
+    }
+
+    const viewMode = this.config.weekly?.viewMode ?? "simple";
+
+    switch (viewMode) {
+      case "detailed":
+        return this.renderWeeklyDetailed(ctx);
+      case "smart":
+        return this.renderWeeklySmart(ctx);
+      case "simple":
+      default:
+        return this.renderWeeklySimple(ctx);
+    }
   }
 
   private getSegment(name: SegmentName, ctx: RenderContext): Segment | null {

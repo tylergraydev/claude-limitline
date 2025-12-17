@@ -92,7 +92,8 @@ Create a `claude-limitline.json` file in your Claude config directory (`~/.claud
     "enabled": true,
     "displayStyle": "text",
     "barWidth": 10,
-    "showWeekProgress": true
+    "showWeekProgress": true,
+    "viewMode": "smart"
   },
   "budget": {
     "pollInterval": 15,
@@ -122,11 +123,24 @@ Create a `claude-limitline.json` file in your Claude config directory (`~/.claud
 | `weekly.displayStyle` | `"bar"` or `"text"` | `"text"` |
 | `weekly.barWidth` | Width of progress bar in characters | `10` |
 | `weekly.showWeekProgress` | Show week progress percentage | `true` |
+| `weekly.viewMode` | `"simple"`, `"detailed"`, or `"smart"` | `"simple"` |
 | `budget.pollInterval` | Minutes between API calls | `15` |
 | `budget.warningThreshold` | Percentage to trigger warning color | `80` |
 | `theme` | Color theme name | `"dark"` |
 | `segmentOrder` | Array to customize segment order | `["directory", "git", "model", "block", "weekly"]` |
 | `showTrend` | Show ↑↓ arrows for usage changes | `true` |
+
+### Weekly View Modes
+
+The weekly segment supports three view modes for displaying usage limits:
+
+| Mode | Description | Example |
+|------|-------------|---------|
+| `simple` | Shows overall weekly usage only (default) | `○ 47% (wk 85%)` |
+| `detailed` | Shows overall, Opus, and Sonnet usage side by side | `○47% ◈15% ◇7%` |
+| `smart` | Shows the most restrictive (bottleneck) limit with indicator | `○47%▲ (wk 85%)` |
+
+**Note:** Model-specific limits (Opus/Sonnet) are only available on certain subscription tiers. When a model-specific limit is not available, it will be hidden from the display.
 
 ### Available Themes
 
@@ -176,7 +190,7 @@ npm run dev      # Watch mode
 
 ## Testing
 
-The project uses [Vitest](https://vitest.dev/) for testing with 155 tests covering config loading, themes, segments, utilities, and rendering.
+The project uses [Vitest](https://vitest.dev/) for testing with 166 tests covering config loading, themes, segments, utilities, and rendering.
 
 ```bash
 npm test              # Run tests once

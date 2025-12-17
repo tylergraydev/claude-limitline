@@ -123,6 +123,64 @@ describe("oauth utilities", () => {
       expect(result?.sevenDay).toBeNull();
     });
 
+    it("parses seven_day_opus when present", async () => {
+      const mockResponse = {
+        five_hour: { utilization: 29.0, resets_at: "2025-01-15T12:00:00Z" },
+        seven_day: { utilization: 47.0, resets_at: "2025-01-20T00:00:00Z" },
+        seven_day_opus: { utilization: 15.0, resets_at: "2025-01-20T00:00:00Z" },
+        seven_day_sonnet: null,
+      };
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      });
+
+      const result = await fetchUsageFromAPI("test-token");
+
+      expect(result?.sevenDayOpus?.percentUsed).toBe(15.0);
+      expect(result?.sevenDaySonnet).toBeNull();
+    });
+
+    it("parses seven_day_sonnet when present", async () => {
+      const mockResponse = {
+        five_hour: { utilization: 29.0, resets_at: "2025-01-15T12:00:00Z" },
+        seven_day: { utilization: 47.0, resets_at: "2025-01-20T00:00:00Z" },
+        seven_day_opus: null,
+        seven_day_sonnet: { utilization: 7.0, resets_at: "2025-01-20T00:00:00Z" },
+      };
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      });
+
+      const result = await fetchUsageFromAPI("test-token");
+
+      expect(result?.sevenDayOpus).toBeNull();
+      expect(result?.sevenDaySonnet?.percentUsed).toBe(7.0);
+    });
+
+    it("parses all model-specific limits when present", async () => {
+      const mockResponse = {
+        five_hour: { utilization: 29.0, resets_at: "2025-01-15T12:00:00Z" },
+        seven_day: { utilization: 47.0, resets_at: "2025-01-20T00:00:00Z" },
+        seven_day_opus: { utilization: 15.0, resets_at: "2025-01-20T00:00:00Z" },
+        seven_day_sonnet: { utilization: 7.0, resets_at: "2025-01-20T00:00:00Z" },
+      };
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      });
+
+      const result = await fetchUsageFromAPI("test-token");
+
+      expect(result?.sevenDay?.percentUsed).toBe(47.0);
+      expect(result?.sevenDayOpus?.percentUsed).toBe(15.0);
+      expect(result?.sevenDaySonnet?.percentUsed).toBe(7.0);
+    });
+
     it("sends correct headers", async () => {
       mockFetch.mockResolvedValue({
         ok: true,
@@ -151,6 +209,8 @@ describe("oauth utilities", () => {
 
       expect(trend.fiveHourTrend).toBeNull();
       expect(trend.sevenDayTrend).toBeNull();
+      expect(trend.sevenDayOpusTrend).toBeNull();
+      expect(trend.sevenDaySonnetTrend).toBeNull();
     });
 
     // Note: Testing trends with actual API calls requires integration tests

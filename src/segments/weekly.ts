@@ -6,6 +6,11 @@ export interface WeeklyInfo {
   resetAt: Date | null;
   isRealtime: boolean;
   weekProgressPercent: number;
+  // Model-specific weekly limits
+  opusPercentUsed: number | null;
+  sonnetPercentUsed: number | null;
+  opusResetAt: Date | null;
+  sonnetResetAt: Date | null;
 }
 
 export class WeeklyProvider {
@@ -100,6 +105,10 @@ export class WeeklyProvider {
       resetAt: null,
       isRealtime: false,
       weekProgressPercent,
+      opusPercentUsed: null,
+      sonnetPercentUsed: null,
+      opusResetAt: null,
+      sonnetResetAt: null,
     };
   }
 
@@ -114,6 +123,8 @@ export class WeeklyProvider {
       }
 
       const sevenDay = usage.sevenDay;
+      const sevenDayOpus = usage.sevenDayOpus;
+      const sevenDaySonnet = usage.sevenDaySonnet;
 
       // Calculate week progress based on API's reset time
       const weekProgressPercent = this.calculateWeekProgressFromResetTime(sevenDay.resetAt);
@@ -121,12 +132,22 @@ export class WeeklyProvider {
       debug(
         `Weekly segment (realtime): ${sevenDay.percentUsed}% used, resets at ${sevenDay.resetAt.toISOString()}`
       );
+      if (sevenDayOpus) {
+        debug(`Weekly Opus: ${sevenDayOpus.percentUsed}% used`);
+      }
+      if (sevenDaySonnet) {
+        debug(`Weekly Sonnet: ${sevenDaySonnet.percentUsed}% used`);
+      }
 
       return {
         percentUsed: sevenDay.percentUsed,
         resetAt: sevenDay.resetAt,
         isRealtime: true,
         weekProgressPercent,
+        opusPercentUsed: sevenDayOpus?.percentUsed ?? null,
+        sonnetPercentUsed: sevenDaySonnet?.percentUsed ?? null,
+        opusResetAt: sevenDayOpus?.resetAt ?? null,
+        sonnetResetAt: sevenDaySonnet?.resetAt ?? null,
       };
     } catch (error) {
       debug("Error getting realtime weekly info:", error);

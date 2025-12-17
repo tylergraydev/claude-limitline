@@ -30,6 +30,8 @@ describe("WeeklyProvider", () => {
           resetAt: futureDate,
           isOverLimit: false,
         },
+        sevenDayOpus: null,
+        sevenDaySonnet: null,
       });
 
       const result = await provider.getWeeklyInfo();
@@ -39,6 +41,8 @@ describe("WeeklyProvider", () => {
       expect(result.resetAt).toEqual(futureDate);
       expect(result.weekProgressPercent).toBeGreaterThanOrEqual(0);
       expect(result.weekProgressPercent).toBeLessThanOrEqual(100);
+      expect(result.opusPercentUsed).toBeNull();
+      expect(result.sonnetPercentUsed).toBeNull();
     });
 
     it("returns null values and calculated week progress when API returns no sevenDay data", async () => {
@@ -49,6 +53,8 @@ describe("WeeklyProvider", () => {
           isOverLimit: false,
         },
         sevenDay: null,
+        sevenDayOpus: null,
+        sevenDaySonnet: null,
       });
 
       const result = await provider.getWeeklyInfo();
@@ -58,6 +64,86 @@ describe("WeeklyProvider", () => {
       expect(result.isRealtime).toBe(false);
       expect(result.weekProgressPercent).toBeGreaterThanOrEqual(0);
       expect(result.weekProgressPercent).toBeLessThanOrEqual(100);
+    });
+
+    it("returns model-specific usage when Opus data is available", async () => {
+      const futureDate = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+      vi.mocked(getRealtimeUsage).mockResolvedValue({
+        fiveHour: null,
+        sevenDay: {
+          percentUsed: 47,
+          resetAt: futureDate,
+          isOverLimit: false,
+        },
+        sevenDayOpus: {
+          percentUsed: 15,
+          resetAt: futureDate,
+          isOverLimit: false,
+        },
+        sevenDaySonnet: null,
+      });
+
+      const result = await provider.getWeeklyInfo();
+
+      expect(result.percentUsed).toBe(47);
+      expect(result.opusPercentUsed).toBe(15);
+      expect(result.sonnetPercentUsed).toBeNull();
+      expect(result.opusResetAt).toEqual(futureDate);
+      expect(result.sonnetResetAt).toBeNull();
+    });
+
+    it("returns model-specific usage when Sonnet data is available", async () => {
+      const futureDate = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+      vi.mocked(getRealtimeUsage).mockResolvedValue({
+        fiveHour: null,
+        sevenDay: {
+          percentUsed: 47,
+          resetAt: futureDate,
+          isOverLimit: false,
+        },
+        sevenDayOpus: null,
+        sevenDaySonnet: {
+          percentUsed: 7,
+          resetAt: futureDate,
+          isOverLimit: false,
+        },
+      });
+
+      const result = await provider.getWeeklyInfo();
+
+      expect(result.percentUsed).toBe(47);
+      expect(result.opusPercentUsed).toBeNull();
+      expect(result.sonnetPercentUsed).toBe(7);
+      expect(result.opusResetAt).toBeNull();
+      expect(result.sonnetResetAt).toEqual(futureDate);
+    });
+
+    it("returns all model-specific usage when both are available", async () => {
+      const futureDate = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+      vi.mocked(getRealtimeUsage).mockResolvedValue({
+        fiveHour: null,
+        sevenDay: {
+          percentUsed: 47,
+          resetAt: futureDate,
+          isOverLimit: false,
+        },
+        sevenDayOpus: {
+          percentUsed: 15,
+          resetAt: futureDate,
+          isOverLimit: false,
+        },
+        sevenDaySonnet: {
+          percentUsed: 7,
+          resetAt: futureDate,
+          isOverLimit: false,
+        },
+      });
+
+      const result = await provider.getWeeklyInfo();
+
+      expect(result.percentUsed).toBe(47);
+      expect(result.opusPercentUsed).toBe(15);
+      expect(result.sonnetPercentUsed).toBe(7);
     });
 
     it("returns null values when API returns null", async () => {
@@ -104,6 +190,8 @@ describe("WeeklyProvider", () => {
           resetAt: twoDaysFromNow,
           isOverLimit: false,
         },
+        sevenDayOpus: null,
+        sevenDaySonnet: null,
       });
 
       const result = await provider.getWeeklyInfo();

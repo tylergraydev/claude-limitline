@@ -31,6 +31,10 @@ describe("Renderer", () => {
     weekProgressPercent: 75,
     resetAt: new Date(),
     isRealtime: true,
+    opusPercentUsed: null,
+    sonnetPercentUsed: null,
+    opusResetAt: null,
+    sonnetResetAt: null,
   };
 
   describe("render", () => {
@@ -170,6 +174,8 @@ describe("Renderer", () => {
       const trendInfo = {
         fiveHourTrend: "up" as const,
         sevenDayTrend: "same" as const,
+        sevenDayOpusTrend: null,
+        sevenDaySonnetTrend: null,
       };
       const output = renderer.render(defaultBlockInfo, defaultWeeklyInfo, defaultEnvInfo, trendInfo);
 
@@ -185,6 +191,8 @@ describe("Renderer", () => {
       const trendInfo = {
         fiveHourTrend: "down" as const,
         sevenDayTrend: "down" as const,
+        sevenDayOpusTrend: null,
+        sevenDaySonnetTrend: null,
       };
       const output = renderer.render(defaultBlockInfo, defaultWeeklyInfo, defaultEnvInfo, trendInfo);
 
@@ -200,6 +208,8 @@ describe("Renderer", () => {
       const trendInfo = {
         fiveHourTrend: "up" as const,
         sevenDayTrend: "up" as const,
+        sevenDayOpusTrend: null,
+        sevenDaySonnetTrend: null,
       };
       const output = renderer.render(defaultBlockInfo, defaultWeeklyInfo, defaultEnvInfo, trendInfo);
 
@@ -300,6 +310,122 @@ describe("Renderer", () => {
 
       // Should contain progress bar characters
       expect(output).toMatch(/[█░]/);
+    });
+  });
+
+  describe("weekly view modes", () => {
+    const weeklyInfoWithModelData: WeeklyInfo = {
+      percentUsed: 47,
+      weekProgressPercent: 75,
+      resetAt: new Date(),
+      isRealtime: true,
+      opusPercentUsed: 15,
+      sonnetPercentUsed: 7,
+      opusResetAt: new Date(),
+      sonnetResetAt: new Date(),
+    };
+
+    it("shows only overall percentage in simple mode (default)", () => {
+      const config: LimitlineConfig = {
+        ...DEFAULT_CONFIG,
+        weekly: {
+          enabled: true,
+          viewMode: "simple",
+        },
+      };
+      const renderer = new Renderer(config);
+      const output = renderer.render(defaultBlockInfo, weeklyInfoWithModelData, defaultEnvInfo);
+
+      expect(output).toContain("47%");
+      // Should not show Opus/Sonnet symbols
+      expect(output).not.toContain("◈");
+      expect(output).not.toContain("◇");
+    });
+
+    it("shows all model percentages in detailed mode", () => {
+      const config: LimitlineConfig = {
+        ...DEFAULT_CONFIG,
+        weekly: {
+          enabled: true,
+          viewMode: "detailed",
+        },
+      };
+      const renderer = new Renderer(config);
+      const output = renderer.render(defaultBlockInfo, weeklyInfoWithModelData, defaultEnvInfo);
+
+      expect(output).toContain("47%");
+      expect(output).toContain("15%");
+      expect(output).toContain("7%");
+    });
+
+    it("shows bottleneck (highest) percentage in smart mode", () => {
+      const config: LimitlineConfig = {
+        ...DEFAULT_CONFIG,
+        weekly: {
+          enabled: true,
+          viewMode: "smart",
+        },
+      };
+      const renderer = new Renderer(config);
+      const output = renderer.render(defaultBlockInfo, weeklyInfoWithModelData, defaultEnvInfo);
+
+      // Overall (47%) is the bottleneck here
+      expect(output).toContain("47%");
+      // Should show bottleneck indicator
+      expect(output).toContain("▲");
+    });
+
+    it("shows model-specific bottleneck when it is the highest", () => {
+      const config: LimitlineConfig = {
+        ...DEFAULT_CONFIG,
+        weekly: {
+          enabled: true,
+          viewMode: "smart",
+        },
+      };
+      const renderer = new Renderer(config);
+      const weeklyInfoOpusHigh: WeeklyInfo = {
+        percentUsed: 30,
+        weekProgressPercent: 75,
+        resetAt: new Date(),
+        isRealtime: true,
+        opusPercentUsed: 85,  // Opus is the bottleneck
+        sonnetPercentUsed: 10,
+        opusResetAt: new Date(),
+        sonnetResetAt: new Date(),
+      };
+      const output = renderer.render(defaultBlockInfo, weeklyInfoOpusHigh, defaultEnvInfo);
+
+      expect(output).toContain("85%");
+      expect(output).toContain("▲");
+    });
+
+    it("detailed mode hides unavailable model limits", () => {
+      const config: LimitlineConfig = {
+        ...DEFAULT_CONFIG,
+        weekly: {
+          enabled: true,
+          viewMode: "detailed",
+        },
+      };
+      const renderer = new Renderer(config);
+      const weeklyInfoOnlySonnet: WeeklyInfo = {
+        percentUsed: 47,
+        weekProgressPercent: 75,
+        resetAt: new Date(),
+        isRealtime: true,
+        opusPercentUsed: null,
+        sonnetPercentUsed: 7,
+        opusResetAt: null,
+        sonnetResetAt: new Date(),
+      };
+      const output = renderer.render(defaultBlockInfo, weeklyInfoOnlySonnet, defaultEnvInfo);
+
+      // Should show overall and sonnet
+      expect(output).toContain("47%");
+      expect(output).toContain("7%");
+      // Should not show opus
+      expect(output).not.toContain("◈");
     });
   });
 });
