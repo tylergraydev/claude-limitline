@@ -6,6 +6,7 @@ import { WeeklyProvider } from "./segments/weekly.js";
 import { Renderer } from "./renderer.js";
 import { getEnvironmentInfo } from "./utils/environment.js";
 import { readHookData } from "./utils/claude-hook.js";
+import { getUsageTrend } from "./utils/oauth.js";
 import { debug } from "./utils/logger.js";
 
 async function main(): Promise<void> {
@@ -44,9 +45,13 @@ async function main(): Promise<void> {
     debug("Block info:", JSON.stringify(blockInfo));
     debug("Weekly info:", JSON.stringify(weeklyInfo));
 
+    // Get trend info for usage changes
+    const trendInfo = config.showTrend ? getUsageTrend() : null;
+    debug("Trend info:", JSON.stringify(trendInfo));
+
     // Render output
     const renderer = new Renderer(config);
-    const output = renderer.render(blockInfo, weeklyInfo, envInfo);
+    const output = renderer.render(blockInfo, weeklyInfo, envInfo, trendInfo);
 
     if (output) {
       process.stdout.write(output);

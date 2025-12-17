@@ -27,7 +27,11 @@ export interface BudgetConfig {
 export interface DisplayConfig {
   style?: "powerline" | "minimal" | "capsule";
   useNerdFonts?: boolean;
+  compactMode?: "auto" | "always" | "never";  // Auto-compact when terminal is narrow
+  compactWidth?: number;  // Terminal width threshold for compact mode (default 80)
 }
+
+export type SegmentName = "directory" | "git" | "model" | "block" | "weekly";
 
 export interface LimitlineConfig {
   display?: DisplayConfig;
@@ -38,12 +42,16 @@ export interface LimitlineConfig {
   weekly?: WeeklySegmentConfig;
   budget?: BudgetConfig;
   theme?: string;
+  segmentOrder?: SegmentName[];     // Custom order for segments
+  showTrend?: boolean;              // Show ↑↓ trend arrows for usage
 }
 
 export const DEFAULT_CONFIG: LimitlineConfig = {
   display: {
     style: "powerline",
     useNerdFonts: true,
+    compactMode: "auto",
+    compactWidth: 80,
   },
   directory: {
     enabled: true,
@@ -71,4 +79,6 @@ export const DEFAULT_CONFIG: LimitlineConfig = {
     warningThreshold: 80,
   },
   theme: "dark",
+  segmentOrder: ["directory", "git", "model", "block", "weekly"],
+  showTrend: true,
 };

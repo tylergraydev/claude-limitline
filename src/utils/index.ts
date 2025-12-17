@@ -6,5 +6,7 @@ export {
   getRealtimeUsage,
   fetchUsageFromAPI,
   clearUsageCache,
+  getUsageTrend,
   type OAuthUsageResponse,
+  type TrendInfo,
 } from "./oauth.js";

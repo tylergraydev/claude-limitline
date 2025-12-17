@@ -4,8 +4,9 @@ export const SYMBOLS = {
   left: "\ue0b2",
   branch: "\ue0a0",
   separator: "\ue0b1",
-  block_cost: "\uf252",      // Hourglass
-  weekly_cost: "\uf073",     // Calendar
+  model: "\u2731",           // Heavy asterisk ✱
+  block_cost: "\u25eb",      // White square with vertical bisecting line ◫
+  weekly_cost: "\u25cb",     // Circle ○
   progress_full: "\u2588",   // Full block
   progress_empty: "\u2591",  // Light shade
 };
@@ -15,6 +16,7 @@ export const TEXT_SYMBOLS = {
   left: "<",
   branch: "",
   separator: "|",
+  model: "*",
   block_cost: "BLK",
   weekly_cost: "WK",
   progress_full: "#",

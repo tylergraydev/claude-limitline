@@ -111,13 +111,15 @@ echo '{"model":{"id":"claude-opus-4-5-20251101"}}' | npx claude-limitline
 
 ## Configuration
 
-Create a `.claude-limitline.json` file in your home directory (`~/.claude-limitline.json`) or current working directory:
+Create a `claude-limitline.json` file in your Claude config directory (`~/.claude/claude-limitline.json`) or `.claude-limitline.json` in your current working directory:
 
 ```json
 {
   "display": {
     "style": "powerline",
-    "useNerdFonts": true
+    "useNerdFonts": true,
+    "compactMode": "auto",
+    "compactWidth": 80
   },
   "directory": {
     "enabled": true
@@ -144,7 +146,9 @@ Create a `.claude-limitline.json` file in your home directory (`~/.claude-limitl
     "pollInterval": 15,
     "warningThreshold": 80
   },
-  "theme": "dark"
+  "theme": "dark",
+  "segmentOrder": ["directory", "git", "model", "block", "weekly"],
+  "showTrend": true
 }
 ```
 
@@ -153,6 +157,8 @@ Create a `.claude-limitline.json` file in your home directory (`~/.claude-limitl
 | Option | Description | Default |
 |--------|-------------|---------|
 | `display.useNerdFonts` | Use Nerd Font symbols for powerline | `true` |
+| `display.compactMode` | `"auto"`, `"always"`, or `"never"` | `"auto"` |
+| `display.compactWidth` | Terminal width threshold for compact mode | `80` |
 | `directory.enabled` | Show repository/directory name | `true` |
 | `git.enabled` | Show git branch with dirty indicator | `true` |
 | `model.enabled` | Show Claude model name | `true` |
@@ -167,6 +173,8 @@ Create a `.claude-limitline.json` file in your home directory (`~/.claude-limitl
 | `budget.pollInterval` | Minutes between API calls | `15` |
 | `budget.warningThreshold` | Percentage to trigger warning color | `80` |
 | `theme` | Color theme name | `"dark"` |
+| `segmentOrder` | Array to customize segment order | `["directory", "git", "model", "block", "weekly"]` |
+| `showTrend` | Show ↑↓ arrows for usage changes | `true` |
 
 ### Available Themes
 

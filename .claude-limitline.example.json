@@ -1,7 +1,9 @@
 {
   "display": {
     "style": "powerline",
-    "useNerdFonts": true
+    "useNerdFonts": true,
+    "compactMode": "auto",
+    "compactWidth": 80
   },
   "directory": {
     "enabled": true
@@ -28,5 +30,7 @@
     "pollInterval": 15,
     "warningThreshold": 80
   },
-  "theme": "dark"
+  "theme": "dark",
+  "segmentOrder": ["directory", "git", "model", "block", "weekly"],
+  "showTrend": true
 }

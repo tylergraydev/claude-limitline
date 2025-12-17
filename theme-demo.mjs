@@ -10,7 +10,7 @@ import { join } from 'path';
 
 const themes = ['dark', 'light', 'nord', 'gruvbox', 'tokyo-night', 'rose-pine'];
 const hookData = '{"model":{"id":"claude-opus-4-5-20251101"}}';
-const configPath = join(homedir(), '.claude-limitline.json');
+const configPath = join(homedir(), '.claude', 'claude-limitline.json');
 
 function setTheme(theme) {
   const config = {
@@ -51,4 +51,4 @@ for (const theme of themes) {
 
 console.log('═'.repeat(75));
 console.log('\nDone! Your config has been set to the last theme (rose-pine).');
-console.log('Edit ~/.claude-limitline.json to change it back.');
+console.log('Edit ~/.claude/claude-limitline.json to change it back.');

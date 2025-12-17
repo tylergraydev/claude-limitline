@@ -239,8 +239,43 @@ export async function fetchUsageFromAPI(
 
 // Cache for API responses to avoid hitting rate limits
 let cachedUsage: OAuthUsageResponse | null = null;
+let previousUsage: OAuthUsageResponse | null = null;  // For trend tracking
 let cacheTimestamp = 0;
 let cachedToken: string | null = null;
+
+export interface TrendInfo {
+  fiveHourTrend: "up" | "down" | "same" | null;
+  sevenDayTrend: "up" | "down" | "same" | null;
+}
+
+export function getUsageTrend(): TrendInfo {
+  const result: TrendInfo = {
+    fiveHourTrend: null,
+    sevenDayTrend: null,
+  };
+
+  if (!cachedUsage || !previousUsage) {
+    return result;
+  }
+
+  // Compare five hour usage
+  if (cachedUsage.fiveHour && previousUsage.fiveHour) {
+    const diff = cachedUsage.fiveHour.percentUsed - previousUsage.fiveHour.percentUsed;
+    if (diff > 0.5) result.fiveHourTrend = "up";
+    else if (diff < -0.5) result.fiveHourTrend = "down";
+    else result.fiveHourTrend = "same";
+  }
+
+  // Compare seven day usage
+  if (cachedUsage.sevenDay && previousUsage.sevenDay) {
+    const diff = cachedUsage.sevenDay.percentUsed - previousUsage.sevenDay.percentUsed;
+    if (diff > 0.5) result.sevenDayTrend = "up";
+    else if (diff < -0.5) result.sevenDayTrend = "down";
+    else result.sevenDayTrend = "same";
+  }
+
+  return result;
+}
 
 export async function getRealtimeUsage(
   pollIntervalMinutes: number = 15
@@ -267,6 +302,8 @@ export async function getRealtimeUsage(
   // Fetch fresh data
   const usage = await fetchUsageFromAPI(cachedToken);
   if (usage) {
+    // Store previous for trend tracking before updating
+    previousUsage = cachedUsage;
     cachedUsage = usage;
     cacheTimestamp = now;
     debug("Refreshed realtime usage cache");
@@ -280,6 +317,7 @@ export async function getRealtimeUsage(
 
 export function clearUsageCache(): void {
   cachedUsage = null;
+  previousUsage = null;
   cacheTimestamp = 0;
   cachedToken = null;
 }

@@ -1,9 +1,11 @@
 import { SYMBOLS, TEXT_SYMBOLS, RESET_CODE } from "./utils/constants.js";
-import { getTheme, ansi, hexToRaw, type ColorTheme, type SegmentColor } from "./themes/index.js";
-import { type LimitlineConfig } from "./config/index.js";
+import { getTheme, ansi, type ColorTheme, type SegmentColor } from "./themes/index.js";
+import { type LimitlineConfig, type SegmentName } from "./config/index.js";
 import { type BlockInfo } from "./segments/block.js";
 import { type WeeklyInfo } from "./segments/weekly.js";
 import { type EnvironmentInfo } from "./utils/environment.js";
+import { type TrendInfo } from "./utils/oauth.js";
+import { getTerminalWidth } from "./utils/terminal.js";
 
 interface SymbolSet {
   block: string;
@@ -14,11 +16,21 @@ interface SymbolSet {
   model: string;
   progressFull: string;
   progressEmpty: string;
+  trendUp: string;
+  trendDown: string;
 }
 
 interface Segment {
   text: string;
   colors: SegmentColor;
+}
+
+interface RenderContext {
+  blockInfo: BlockInfo | null;
+  weeklyInfo: WeeklyInfo | null;
+  envInfo: EnvironmentInfo;
+  trendInfo: TrendInfo | null;
+  compact: boolean;
 }
 
 export class Renderer {
@@ -41,10 +53,23 @@ export class Renderer {
       rightArrow: symbolSet.right,
       separator: symbolSet.separator,
       branch: symbolSet.branch,
-      model: "\uf0e7", // Lightning bolt for model
+      model: symbolSet.model,
       progressFull: symbolSet.progress_full,
       progressEmpty: symbolSet.progress_empty,
+      trendUp: "↑",
+      trendDown: "↓",
     };
+  }
+
+  private isCompactMode(): boolean {
+    const mode = this.config.display?.compactMode ?? "auto";
+    if (mode === "always") return true;
+    if (mode === "never") return false;
+
+    // Auto mode - check terminal width
+    const threshold = this.config.display?.compactWidth ?? 80;
+    const termWidth = getTerminalWidth();
+    return termWidth < threshold;
   }
 
   private formatProgressBar(percent: number, width: number): string {
@@ -53,13 +78,23 @@ export class Renderer {
     return this.symbols.progressFull.repeat(filled) + this.symbols.progressEmpty.repeat(empty);
   }
 
-  private formatTimeRemaining(minutes: number): string {
+  private formatTimeRemaining(minutes: number, compact: boolean): string {
     if (minutes >= 60) {
       const hours = Math.floor(minutes / 60);
       const mins = minutes % 60;
+      if (compact) {
+        return mins > 0 ? `${hours}h${mins}m` : `${hours}h`;
+      }
       return mins > 0 ? `${hours}h${mins}m` : `${hours}h`;
     }
     return `${minutes}m`;
+  }
+
+  private getTrendSymbol(trend: "up" | "down" | "same" | null): string {
+    if (!this.config.showTrend) return "";
+    if (trend === "up") return this.symbols.trendUp;
+    if (trend === "down") return this.symbols.trendDown;
+    return "";
   }
 
   private getColorsForPercent(percent: number, baseColors: SegmentColor): SegmentColor {
@@ -106,34 +141,43 @@ export class Renderer {
       .join(` ${this.symbols.separator} `);
   }
 
-  renderDirectory(envInfo: EnvironmentInfo): Segment | null {
-    if (!this.config.directory?.enabled || !envInfo.directory) {
+  private renderDirectory(ctx: RenderContext): Segment | null {
+    if (!this.config.directory?.enabled || !ctx.envInfo.directory) {
       return null;
     }
 
+    const name = ctx.compact && ctx.envInfo.directory.length > 12
+      ? ctx.envInfo.directory.slice(0, 10) + "…"
+      : ctx.envInfo.directory;
+
     return {
-      text: ` ${envInfo.directory} `,
+      text: ` ${name} `,
       colors: this.theme.directory,
     };
   }
 
-  renderGit(envInfo: EnvironmentInfo): Segment | null {
-    if (!this.config.git?.enabled || !envInfo.gitBranch) {
+  private renderGit(ctx: RenderContext): Segment | null {
+    if (!this.config.git?.enabled || !ctx.envInfo.gitBranch) {
       return null;
     }
 
-    const dirtyIndicator = envInfo.gitDirty ? " ●" : "";
+    const dirtyIndicator = ctx.envInfo.gitDirty ? " ●" : "";
     const icon = this.usePowerline ? this.symbols.branch : "";
     const prefix = icon ? `${icon} ` : "";
 
+    let branch = ctx.envInfo.gitBranch;
+    if (ctx.compact && branch.length > 10) {
+      branch = branch.slice(0, 8) + "…";
+    }
+
     return {
-      text: ` ${prefix}${envInfo.gitBranch}${dirtyIndicator} `,
+      text: ` ${prefix}${branch}${dirtyIndicator} `,
       colors: this.theme.git,
     };
   }
 
-  renderModel(envInfo: EnvironmentInfo): Segment | null {
-    if (!this.config.model?.enabled || !envInfo.model) {
+  private renderModel(ctx: RenderContext): Segment | null {
+    if (!this.config.model?.enabled || !ctx.envInfo.model) {
       return null;
     }
 
@@ -141,43 +185,46 @@ export class Renderer {
     const prefix = icon ? `${icon} ` : "";
 
     return {
-      text: ` ${prefix}${envInfo.model} `,
+      text: ` ${prefix}${ctx.envInfo.model} `,
       colors: this.theme.model,
     };
   }
 
-  renderBlock(blockInfo: BlockInfo | null): Segment | null {
-    if (!blockInfo || !this.config.block?.enabled) {
+  private renderBlock(ctx: RenderContext): Segment | null {
+    if (!ctx.blockInfo || !this.config.block?.enabled) {
       return null;
     }
 
     const icon = this.usePowerline ? this.symbols.block : "BLK";
 
-    if (blockInfo.percentUsed === null) {
+    if (ctx.blockInfo.percentUsed === null) {
       return {
         text: ` ${icon} -- `,
         colors: this.theme.block,
       };
     }
 
-    const percent = blockInfo.percentUsed;
+    const percent = ctx.blockInfo.percentUsed;
     const colors = this.getColorsForPercent(percent, this.theme.block);
     const displayStyle = this.config.block.displayStyle || "text";
     const barWidth = this.config.block.barWidth || 10;
     const showTime = this.config.block.showTimeRemaining ?? true;
 
+    // Get trend symbol
+    const trend = this.getTrendSymbol(ctx.trendInfo?.fiveHourTrend ?? null);
+
     let text: string;
 
-    if (displayStyle === "bar") {
+    if (displayStyle === "bar" && !ctx.compact) {
       const bar = this.formatProgressBar(percent, barWidth);
-      text = `${bar} ${Math.round(percent)}%`;
+      text = `${bar} ${Math.round(percent)}%${trend}`;
     } else {
-      text = `${Math.round(percent)}%`;
+      text = `${Math.round(percent)}%${trend}`;
     }
 
-    // Add time remaining if available and enabled
-    if (showTime && blockInfo.timeRemaining !== null) {
-      const timeStr = this.formatTimeRemaining(blockInfo.timeRemaining);
+    // Add time remaining if available and enabled (skip in compact mode)
+    if (showTime && ctx.blockInfo.timeRemaining !== null && !ctx.compact) {
+      const timeStr = this.formatTimeRemaining(ctx.blockInfo.timeRemaining, ctx.compact);
       text += ` (${timeStr})`;
     }
 
@@ -187,37 +234,40 @@ export class Renderer {
     };
   }
 
-  renderWeekly(weeklyInfo: WeeklyInfo | null): Segment | null {
-    if (!weeklyInfo || !this.config.weekly?.enabled) {
+  private renderWeekly(ctx: RenderContext): Segment | null {
+    if (!ctx.weeklyInfo || !this.config.weekly?.enabled) {
       return null;
     }
 
     const icon = this.usePowerline ? this.symbols.weekly : "WK";
 
-    if (weeklyInfo.percentUsed === null) {
+    if (ctx.weeklyInfo.percentUsed === null) {
       return {
         text: ` ${icon} -- `,
         colors: this.theme.weekly,
       };
     }
 
-    const percent = weeklyInfo.percentUsed;
+    const percent = ctx.weeklyInfo.percentUsed;
     const displayStyle = this.config.weekly.displayStyle || "text";
     const barWidth = this.config.weekly.barWidth || 10;
     const showWeekProgress = this.config.weekly.showWeekProgress ?? true;
 
+    // Get trend symbol
+    const trend = this.getTrendSymbol(ctx.trendInfo?.sevenDayTrend ?? null);
+
     let text: string;
 
-    if (displayStyle === "bar") {
+    if (displayStyle === "bar" && !ctx.compact) {
       const bar = this.formatProgressBar(percent, barWidth);
-      text = `${bar} ${Math.round(percent)}%`;
+      text = `${bar} ${Math.round(percent)}%${trend}`;
     } else {
-      text = `${Math.round(percent)}%`;
+      text = `${Math.round(percent)}%${trend}`;
     }
 
-    // Add week progress if enabled
-    if (showWeekProgress) {
-      text += ` (wk ${weeklyInfo.weekProgressPercent}%)`;
+    // Add week progress if enabled (skip in compact mode)
+    if (showWeekProgress && !ctx.compact) {
+      text += ` (wk ${ctx.weeklyInfo.weekProgressPercent}%)`;
     }
 
     return {
@@ -226,32 +276,49 @@ export class Renderer {
     };
   }
 
+  private getSegment(name: SegmentName, ctx: RenderContext): Segment | null {
+    switch (name) {
+      case "directory":
+        return this.renderDirectory(ctx);
+      case "git":
+        return this.renderGit(ctx);
+      case "model":
+        return this.renderModel(ctx);
+      case "block":
+        return this.renderBlock(ctx);
+      case "weekly":
+        return this.renderWeekly(ctx);
+      default:
+        return null;
+    }
+  }
+
   render(
     blockInfo: BlockInfo | null,
     weeklyInfo: WeeklyInfo | null,
-    envInfo: EnvironmentInfo
+    envInfo: EnvironmentInfo,
+    trendInfo: TrendInfo | null = null
   ): string {
+    const compact = this.isCompactMode();
+    const ctx: RenderContext = {
+      blockInfo,
+      weeklyInfo,
+      envInfo,
+      trendInfo,
+      compact,
+    };
+
     const segments: Segment[] = [];
 
-    // Directory/repo name
-    const dirSegment = this.renderDirectory(envInfo);
-    if (dirSegment) segments.push(dirSegment);
+    // Use configured segment order, or default
+    const order = this.config.segmentOrder ?? ["directory", "git", "model", "block", "weekly"];
 
-    // Git branch
-    const gitSegment = this.renderGit(envInfo);
-    if (gitSegment) segments.push(gitSegment);
-
-    // Model
-    const modelSegment = this.renderModel(envInfo);
-    if (modelSegment) segments.push(modelSegment);
-
-    // 5-hour block usage
-    const blockSegment = this.renderBlock(blockInfo);
-    if (blockSegment) segments.push(blockSegment);
-
-    // Weekly usage
-    const weeklySegment = this.renderWeekly(weeklyInfo);
-    if (weeklySegment) segments.push(weeklySegment);
+    for (const name of order) {
+      const segment = this.getSegment(name, ctx);
+      if (segment) {
+        segments.push(segment);
+      }
+    }
 
     if (segments.length === 0) {
       return "";
