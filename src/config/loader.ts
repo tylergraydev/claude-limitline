@@ -37,8 +37,7 @@ function deepMerge(
 export function loadConfig(): LimitlineConfig {
   const configPaths = [
     path.join(process.cwd(), ".claude-limitline.json"),
-    path.join(os.homedir(), ".claude-limitline.json"),
-    path.join(os.homedir(), ".config", "claude-limitline", "config.json"),
+    path.join(os.homedir(), ".claude", "claude-limitline.json"),
   ];
 
   for (const configPath of configPaths) {

@@ -111,7 +111,7 @@ echo '{"model":{"id":"claude-opus-4-5-20251101"}}' | npx claude-limitline
 
 ## Configuration
 
-Create a `.claude-limitline.json` file in your home directory (`~/.claude-limitline.json`) or current working directory:
+Create a `claude-limitline.json` file in your Claude config directory (`~/.claude/claude-limitline.json`) or `.claude-limitline.json` in your current working directory:
 
 ```json
 {
