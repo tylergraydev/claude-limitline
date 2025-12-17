@@ -12,7 +12,7 @@ export interface BlockSegmentConfig extends SegmentConfig {
   showTimeRemaining?: boolean;
 }
 
-export type WeeklyViewMode = "simple" | "detailed" | "smart";
+export type WeeklyViewMode = "simple" | "smart";
 
 export interface WeeklySegmentConfig extends SegmentConfig {
   showWeekProgress?: boolean;

@@ -279,58 +279,6 @@ export class Renderer {
     };
   }
 
-  private renderWeeklyDetailed(ctx: RenderContext): Segment | null {
-    const info = ctx.weeklyInfo!;
-    const overallIcon = this.usePowerline ? this.symbols.weekly : "All";
-    const opusIcon = this.usePowerline ? this.symbols.opus : "Op";
-    const sonnetIcon = this.usePowerline ? this.symbols.sonnet : "So";
-
-    // Build parts for each available limit
-    const parts: string[] = [];
-
-    // Overall
-    if (info.percentUsed !== null) {
-      const trend = this.getTrendSymbol(ctx.trendInfo?.sevenDayTrend ?? null);
-      parts.push(`${overallIcon}${Math.round(info.percentUsed)}%${trend}`);
-    }
-
-    // Opus
-    if (info.opusPercentUsed !== null) {
-      const trend = this.getTrendSymbol(ctx.trendInfo?.sevenDayOpusTrend ?? null);
-      parts.push(`${opusIcon}${Math.round(info.opusPercentUsed)}%${trend}`);
-    }
-
-    // Sonnet
-    if (info.sonnetPercentUsed !== null) {
-      const trend = this.getTrendSymbol(ctx.trendInfo?.sevenDaySonnetTrend ?? null);
-      parts.push(`${sonnetIcon}${Math.round(info.sonnetPercentUsed)}%${trend}`);
-    }
-
-    if (parts.length === 0) {
-      return {
-        text: ` ${overallIcon} -- `,
-        colors: this.theme.weekly,
-      };
-    }
-
-    // In compact mode, use shorter separator
-    const separator = ctx.compact ? " " : " ";
-    const text = parts.join(separator);
-
-    // Use overall colors but could be enhanced with warning colors if any is high
-    const maxPercent = Math.max(
-      info.percentUsed ?? 0,
-      info.opusPercentUsed ?? 0,
-      info.sonnetPercentUsed ?? 0
-    );
-    const colors = this.getColorsForPercent(maxPercent, this.theme.weekly);
-
-    return {
-      text: ` ${text} `,
-      colors,
-    };
-  }
-
   private renderWeeklySmart(ctx: RenderContext): Segment | null {
     const info = ctx.weeklyInfo!;
     const overallIcon = this.usePowerline ? this.symbols.weekly : "All";
@@ -393,8 +341,6 @@ export class Renderer {
     const viewMode = this.config.weekly?.viewMode ?? "simple";
 
     switch (viewMode) {
-      case "detailed":
-        return this.renderWeeklyDetailed(ctx);
       case "smart":
         return this.renderWeeklySmart(ctx);
       case "simple":

@@ -18,9 +18,7 @@ const arrow = '\ue0b0';
 const symbols = {
   block: '◫',
   weekly: '○',
-  opus: '◈',
   sonnet: '◇',
-  bottleneck: '▲',
   branch: '\ue0a0',
   model: '✱',
 };
@@ -32,8 +30,6 @@ const colors = {
   model: { bg: 236, fg: 231 },      // Darker gray bg, white fg
   block: { bg: 235, fg: 117 },      // Dark bg, cyan fg
   weekly: { bg: 234, fg: 120 },     // Darker bg, green fg
-  opus: { bg: 234, fg: 177 },       // Darker bg, purple fg
-  sonnet: { bg: 234, fg: 117 },     // Darker bg, light blue fg
 };
 
 function segment(text, color, nextColor = null) {
@@ -65,13 +61,6 @@ console.log('\x1b[1mSimple Mode\x1b[0m (default):');
 console.log('Shows overall weekly usage only');
 console.log('Config: { "weekly": { "viewMode": "simple" } }\n');
 console.log(renderStatusline(` ${symbols.weekly} 47% (wk 85%) `));
-console.log("\n");
-
-// Detailed mode
-console.log('\x1b[1mDetailed Mode\x1b[0m:');
-console.log('Shows Overall (○), Opus (◈), and Sonnet (◇) side by side');
-console.log('Config: { "weekly": { "viewMode": "detailed" } }\n');
-console.log(renderStatusline(` ${symbols.weekly}47% ${symbols.opus}15% ${symbols.sonnet}7% `));
 console.log("\n");
 
 // Smart mode - Opus selected

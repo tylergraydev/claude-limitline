@@ -342,22 +342,6 @@ describe("Renderer", () => {
       expect(output).not.toContain("◇");
     });
 
-    it("shows all model percentages in detailed mode", () => {
-      const config: LimitlineConfig = {
-        ...DEFAULT_CONFIG,
-        weekly: {
-          enabled: true,
-          viewMode: "detailed",
-        },
-      };
-      const renderer = new Renderer(config);
-      const output = renderer.render(defaultBlockInfo, weeklyInfoWithModelData, defaultEnvInfo);
-
-      expect(output).toContain("47%");
-      expect(output).toContain("15%");
-      expect(output).toContain("7%");
-    });
-
     it("smart mode shows only overall when using Opus", () => {
       const config: LimitlineConfig = {
         ...DEFAULT_CONFIG,
@@ -403,32 +387,5 @@ describe("Renderer", () => {
       expect(output).toContain("wk 75%");
     });
 
-    it("detailed mode hides unavailable model limits", () => {
-      const config: LimitlineConfig = {
-        ...DEFAULT_CONFIG,
-        weekly: {
-          enabled: true,
-          viewMode: "detailed",
-        },
-      };
-      const renderer = new Renderer(config);
-      const weeklyInfoOnlySonnet: WeeklyInfo = {
-        percentUsed: 47,
-        weekProgressPercent: 75,
-        resetAt: new Date(),
-        isRealtime: true,
-        opusPercentUsed: null,
-        sonnetPercentUsed: 7,
-        opusResetAt: null,
-        sonnetResetAt: new Date(),
-      };
-      const output = renderer.render(defaultBlockInfo, weeklyInfoOnlySonnet, defaultEnvInfo);
-
-      // Should show overall and sonnet
-      expect(output).toContain("47%");
-      expect(output).toContain("7%");
-      // Should not show opus
-      expect(output).not.toContain("◈");
-    });
   });
 });
