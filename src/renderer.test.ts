@@ -162,6 +162,74 @@ describe("Renderer", () => {
 
       expect(output).toContain("45m");
     });
+
+    it("shows absolute time in 12h format when configured", () => {
+      const config: LimitlineConfig = {
+        ...DEFAULT_CONFIG,
+        block: {
+          enabled: true,
+          showTimeRemaining: true,
+          timeDisplay: "absolute",
+          timeFormat: "12h",
+        },
+      };
+      const renderer = new Renderer(config);
+      // Create a reset time at 2:30 PM
+      const resetAt = new Date();
+      resetAt.setHours(14, 30, 0, 0);
+      const blockInfo: BlockInfo = {
+        ...defaultBlockInfo,
+        resetAt,
+      };
+      const output = renderer.render(blockInfo, defaultWeeklyInfo, defaultEnvInfo);
+
+      expect(output).toContain("2:30pm");
+    });
+
+    it("shows absolute time in 24h format when configured", () => {
+      const config: LimitlineConfig = {
+        ...DEFAULT_CONFIG,
+        block: {
+          enabled: true,
+          showTimeRemaining: true,
+          timeDisplay: "absolute",
+          timeFormat: "24h",
+        },
+      };
+      const renderer = new Renderer(config);
+      // Create a reset time at 2:30 PM
+      const resetAt = new Date();
+      resetAt.setHours(14, 30, 0, 0);
+      const blockInfo: BlockInfo = {
+        ...defaultBlockInfo,
+        resetAt,
+      };
+      const output = renderer.render(blockInfo, defaultWeeklyInfo, defaultEnvInfo);
+
+      expect(output).toContain("14:30");
+    });
+
+    it("shows AM correctly for morning times", () => {
+      const config: LimitlineConfig = {
+        ...DEFAULT_CONFIG,
+        block: {
+          enabled: true,
+          showTimeRemaining: true,
+          timeDisplay: "absolute",
+          timeFormat: "12h",
+        },
+      };
+      const renderer = new Renderer(config);
+      const resetAt = new Date();
+      resetAt.setHours(9, 15, 0, 0);
+      const blockInfo: BlockInfo = {
+        ...defaultBlockInfo,
+        resetAt,
+      };
+      const output = renderer.render(blockInfo, defaultWeeklyInfo, defaultEnvInfo);
+
+      expect(output).toContain("9:15am");
+    });
   });
 
   describe("trend arrows", () => {

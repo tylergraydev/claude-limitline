@@ -6,6 +6,7 @@ import { type WeeklyInfo } from "./segments/weekly.js";
 import { type EnvironmentInfo } from "./utils/environment.js";
 import { type TrendInfo } from "./utils/oauth.js";
 import { getTerminalWidth } from "./utils/terminal.js";
+import { getBlockSparkline } from "./utils/history.js";
 
 interface SymbolSet {
   block: string;
@@ -94,6 +95,22 @@ export class Renderer {
       return mins > 0 ? `${hours}h${mins}m` : `${hours}h`;
     }
     return `${minutes}m`;
+  }
+
+  private formatAbsoluteTime(resetAt: Date, format: "12h" | "24h"): string {
+    const hours = resetAt.getHours();
+    const minutes = resetAt.getMinutes();
+    const paddedMinutes = minutes.toString().padStart(2, "0");
+
+    if (format === "24h") {
+      const paddedHours = hours.toString().padStart(2, "0");
+      return `${paddedHours}:${paddedMinutes}`;
+    }
+
+    // 12-hour format
+    const hour12 = hours % 12 || 12;
+    const ampm = hours < 12 ? "am" : "pm";
+    return `${hour12}:${paddedMinutes}${ampm}`;
   }
 
   private getTrendSymbol(trend: "up" | "down" | "same" | null): string {
@@ -228,10 +245,28 @@ export class Renderer {
       text = `${Math.round(percent)}%${trend}`;
     }
 
-    // Add time remaining if available and enabled (skip in compact mode)
-    if (showTime && ctx.blockInfo.timeRemaining !== null && !ctx.compact) {
-      const timeStr = this.formatTimeRemaining(ctx.blockInfo.timeRemaining, ctx.compact);
-      text += ` (${timeStr})`;
+    // Add sparkline if enabled (skip in compact mode)
+    const showSparkline = this.config.block?.showSparkline ?? false;
+    if (showSparkline && !ctx.compact) {
+      const sparklineWidth = this.config.block?.sparklineWidth ?? 8;
+      const sparkline = getBlockSparkline(sparklineWidth);
+      if (sparkline) {
+        text += ` ${sparkline}`;
+      }
+    }
+
+    // Add time if available and enabled (skip in compact mode)
+    if (showTime && !ctx.compact) {
+      const timeDisplay = this.config.block?.timeDisplay ?? "remaining";
+      const timeFormat = this.config.block?.timeFormat ?? "12h";
+
+      if (timeDisplay === "absolute" && ctx.blockInfo.resetAt) {
+        const timeStr = this.formatAbsoluteTime(ctx.blockInfo.resetAt, timeFormat);
+        text += ` (${timeStr})`;
+      } else if (ctx.blockInfo.timeRemaining !== null) {
+        const timeStr = this.formatTimeRemaining(ctx.blockInfo.timeRemaining, ctx.compact);
+        text += ` (${timeStr})`;
+      }
     }
 
     return {
