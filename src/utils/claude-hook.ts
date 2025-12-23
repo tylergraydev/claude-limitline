@@ -16,6 +16,14 @@ export interface ClaudeHookData {
     current_dir: string;
     project_dir: string;
   };
+  context_window?: {
+    current_usage: {
+      input_tokens: number;
+      cache_creation_input_tokens: number;
+      cache_read_input_tokens: number;
+    };
+    context_window_size: number;
+  };
   version?: string;
 }
 

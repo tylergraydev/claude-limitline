@@ -14,9 +14,11 @@ interface SymbolSet {
   sonnet: string;
   bottleneck: string;
   rightArrow: string;
+  leftArrow: string;
   separator: string;
   branch: string;
   model: string;
+  context: string;
   progressFull: string;
   progressEmpty: string;
   trendUp: string;
@@ -57,9 +59,11 @@ export class Renderer {
       sonnet: symbolSet.sonnet_cost,
       bottleneck: symbolSet.bottleneck,
       rightArrow: symbolSet.right,
+      leftArrow: symbolSet.left,
       separator: symbolSet.separator,
       branch: symbolSet.branch,
       model: symbolSet.model,
+      context: "◐",  // Half-filled circle for context
       progressFull: symbolSet.progress_full,
       progressEmpty: symbolSet.progress_empty,
       trendUp: "↑",
@@ -135,6 +139,27 @@ export class Renderer {
         // Final arrow to terminal background
         output += ansi.fg(seg.colors.bg) + this.symbols.rightArrow;
       }
+    }
+
+    output += RESET_CODE;
+    return output;
+  }
+
+  private renderRightPowerline(segments: Segment[]): string {
+    if (segments.length === 0) return "";
+
+    let output = "";
+
+    for (let i = 0; i < segments.length; i++) {
+      const seg = segments[i];
+
+      // Left arrow first (pointing left like vim statuslines)
+      // Arrow color: segment bg as fg, previous segment bg (or terminal) as bg
+      output += RESET_CODE;
+      output += ansi.fg(seg.colors.bg) + this.symbols.leftArrow;
+
+      // Segment content with background and foreground
+      output += ansi.bg(seg.colors.bg) + ansi.fg(seg.colors.fg) + seg.text;
     }
 
     output += RESET_CODE;
@@ -349,6 +374,21 @@ export class Renderer {
     }
   }
 
+  private renderContext(ctx: RenderContext): Segment | null {
+    if (!this.config.context?.enabled) {
+      return null;
+    }
+
+    const percent = ctx.envInfo.contextPercent;
+    const icon = this.usePowerline ? this.symbols.context : "CTX";
+    const colors = this.getColorsForPercent(percent, this.theme.context);
+
+    return {
+      text: ` ${icon} ${percent}% `,
+      colors,
+    };
+  }
+
   private getSegment(name: SegmentName, ctx: RenderContext): Segment | null {
     switch (name) {
       case "directory":
@@ -361,6 +401,8 @@ export class Renderer {
         return this.renderBlock(ctx);
       case "weekly":
         return this.renderWeekly(ctx);
+      case "context":
+        return this.renderContext(ctx);
       default:
         return null;
     }
@@ -381,26 +423,43 @@ export class Renderer {
       compact,
     };
 
-    const segments: Segment[] = [];
-
-    // Use configured segment order, or default
+    // Build left segments (existing behavior)
+    const leftSegments: Segment[] = [];
     const order = this.config.segmentOrder ?? ["directory", "git", "model", "block", "weekly"];
 
     for (const name of order) {
+      // Skip context - it goes on the right side
+      if (name === "context") continue;
       const segment = this.getSegment(name, ctx);
       if (segment) {
-        segments.push(segment);
+        leftSegments.push(segment);
       }
     }
 
-    if (segments.length === 0) {
-      return "";
+    // Build right segments (context with left arrows)
+    const rightSegments: Segment[] = [];
+    const contextSegment = this.renderContext(ctx);
+    if (contextSegment) {
+      rightSegments.push(contextSegment);
     }
 
+    // Render both sides
+    let output = "";
+
     if (this.usePowerline) {
-      return this.renderPowerline(segments);
+      if (leftSegments.length > 0) {
+        output += this.renderPowerline(leftSegments);
+      }
+      if (rightSegments.length > 0) {
+        output += this.renderRightPowerline(rightSegments);
+      }
     } else {
-      return this.renderFallback(segments);
+      const allSegments = [...leftSegments, ...rightSegments];
+      if (allSegments.length > 0) {
+        output = this.renderFallback(allSegments);
+      }
     }
+
+    return output;
   }
 }

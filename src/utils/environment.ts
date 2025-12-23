@@ -80,6 +80,25 @@ export interface EnvironmentInfo {
   gitBranch: string | null;
   gitDirty: boolean;
   model: string | null;
+  contextPercent: number;
+}
+
+/**
+ * Calculate context window usage percentage from hook data
+ */
+export function getContextPercent(hookData?: ClaudeHookData | null): number {
+  const ctx = hookData?.context_window;
+  if (!ctx?.current_usage || !ctx.context_window_size) {
+    return 0;
+  }
+
+  const usage = ctx.current_usage;
+  const totalTokens =
+    (usage.input_tokens || 0) +
+    (usage.cache_creation_input_tokens || 0) +
+    (usage.cache_read_input_tokens || 0);
+
+  return Math.round((totalTokens / ctx.context_window_size) * 100);
 }
 
 /**
@@ -91,5 +110,6 @@ export function getEnvironmentInfo(hookData?: ClaudeHookData | null): Environmen
     gitBranch: getGitBranch(),
     gitDirty: hasGitChanges(),
     model: getClaudeModel(hookData),
+    contextPercent: getContextPercent(hookData),
   };
 }
