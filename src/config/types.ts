@@ -34,7 +34,7 @@ export interface DisplayConfig {
   compactWidth?: number;  // Terminal width threshold for compact mode (default 80)
 }
 
-export type SegmentName = "directory" | "git" | "model" | "block" | "weekly";
+export type SegmentName = "directory" | "git" | "model" | "block" | "weekly" | "context";
 
 export interface LimitlineConfig {
   display?: DisplayConfig;
@@ -43,6 +43,7 @@ export interface LimitlineConfig {
   model?: SimpleSegmentConfig;      // Show Claude model
   block?: BlockSegmentConfig;
   weekly?: WeeklySegmentConfig;
+  context?: SimpleSegmentConfig;    // Show context window usage (right side)
   budget?: BudgetConfig;
   theme?: string;
   segmentOrder?: SegmentName[];     // Custom order for segments
@@ -77,6 +78,9 @@ export const DEFAULT_CONFIG: LimitlineConfig = {
     barWidth: 10,
     showWeekProgress: true,
     viewMode: "simple",
+  },
+  context: {
+    enabled: true,
   },
   budget: {
     pollInterval: 15,
