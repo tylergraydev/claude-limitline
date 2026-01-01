@@ -19,7 +19,12 @@ vi.mock("node:fs", () => ({
   },
 }));
 
+vi.mock("node:child_process", () => ({
+  exec: vi.fn(),
+}));
+
 import fs from "node:fs";
+import { exec } from "node:child_process";
 
 describe("oauth utilities", () => {
   beforeEach(() => {
@@ -237,6 +242,127 @@ describe("oauth utilities", () => {
       expect(token).toBeNull();
 
       Object.defineProperty(process, "platform", { value: originalPlatform });
+    });
+
+    describe("macOS", () => {
+      const originalPlatform = process.platform;
+
+      beforeEach(() => {
+        Object.defineProperty(process, "platform", { value: "darwin" });
+      });
+
+      afterEach(() => {
+        Object.defineProperty(process, "platform", { value: originalPlatform });
+      });
+
+      it("parses JSON credentials from keychain with claudeAiOauth structure", async () => {
+        const mockCredentials = JSON.stringify({
+          claudeAiOauth: {
+            accessToken: "sk-ant-oat-test-token-12345",
+          },
+        });
+
+        vi.mocked(exec).mockImplementation(((cmd: string, opts: unknown, callback?: (error: Error | null, result: { stdout: string; stderr: string }) => void) => {
+          // Handle both (cmd, callback) and (cmd, opts, callback) signatures
+          const cb = typeof opts === "function" ? opts : callback;
+          if (cb) {
+            cb(null, { stdout: mockCredentials, stderr: "" });
+          }
+          return {} as ReturnType<typeof exec>;
+        }) as typeof exec);
+
+        const token = await getOAuthToken();
+
+        expect(token).toBe("sk-ant-oat-test-token-12345");
+      });
+
+      it("falls back to raw token if keychain returns non-JSON", async () => {
+        const rawToken = "sk-ant-oat-raw-token-67890";
+
+        vi.mocked(exec).mockImplementation(((cmd: string, opts: unknown, callback?: (error: Error | null, result: { stdout: string; stderr: string }) => void) => {
+          const cb = typeof opts === "function" ? opts : callback;
+          if (cb) {
+            cb(null, { stdout: rawToken, stderr: "" });
+          }
+          return {} as ReturnType<typeof exec>;
+        }) as typeof exec);
+
+        const token = await getOAuthToken();
+
+        expect(token).toBe("sk-ant-oat-raw-token-67890");
+      });
+
+      it("returns null when keychain retrieval fails", async () => {
+        vi.mocked(exec).mockImplementation(((cmd: string, opts: unknown, callback?: (error: Error | null, result: { stdout: string; stderr: string }) => void) => {
+          const cb = typeof opts === "function" ? opts : callback;
+          if (cb) {
+            cb(new Error("keychain error"), { stdout: "", stderr: "" });
+          }
+          return {} as ReturnType<typeof exec>;
+        }) as typeof exec);
+
+        const token = await getOAuthToken();
+
+        expect(token).toBeNull();
+      });
+
+      it("returns null when JSON is valid but missing accessToken", async () => {
+        const mockCredentials = JSON.stringify({
+          claudeAiOauth: {
+            refreshToken: "some-refresh-token",
+          },
+        });
+
+        vi.mocked(exec).mockImplementation(((cmd: string, opts: unknown, callback?: (error: Error | null, result: { stdout: string; stderr: string }) => void) => {
+          const cb = typeof opts === "function" ? opts : callback;
+          if (cb) {
+            cb(null, { stdout: mockCredentials, stderr: "" });
+          }
+          return {} as ReturnType<typeof exec>;
+        }) as typeof exec);
+
+        const token = await getOAuthToken();
+
+        expect(token).toBeNull();
+      });
+
+      it("returns null when token doesn't start with sk-ant-oat", async () => {
+        const mockCredentials = JSON.stringify({
+          claudeAiOauth: {
+            accessToken: "invalid-token-format",
+          },
+        });
+
+        vi.mocked(exec).mockImplementation(((cmd: string, opts: unknown, callback?: (error: Error | null, result: { stdout: string; stderr: string }) => void) => {
+          const cb = typeof opts === "function" ? opts : callback;
+          if (cb) {
+            cb(null, { stdout: mockCredentials, stderr: "" });
+          }
+          return {} as ReturnType<typeof exec>;
+        }) as typeof exec);
+
+        const token = await getOAuthToken();
+
+        expect(token).toBeNull();
+      });
+
+      it("uses correct keychain service name", async () => {
+        vi.mocked(exec).mockImplementation(((cmd: string, opts: unknown, callback?: (error: Error | null, result: { stdout: string; stderr: string }) => void) => {
+          const cb = typeof opts === "function" ? opts : callback;
+          if (cb) {
+            cb(new Error("not found"), { stdout: "", stderr: "" });
+          }
+          return {} as ReturnType<typeof exec>;
+        }) as typeof exec);
+
+        await getOAuthToken();
+
+        expect(exec).toHaveBeenCalledWith(
+          expect.stringContaining("Claude Code-credentials"),
+          expect.anything(),
+          expect.anything()
+        );
+      });
     });
   });
 });

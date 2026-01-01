@@ -113,12 +113,30 @@ async function getOAuthTokenWindows(): Promise<string | null> {
 async function getOAuthTokenMacOS(): Promise<string | null> {
   try {
     const { stdout } = await execAsync(
-      `security find-generic-password -s "Claude Code" -w`,
+      `security find-generic-password -s "Claude Code-credentials" -w`,
       { timeout: 5000 }
     );
-    const token = stdout.trim();
-    if (token && token.startsWith("sk-ant-oat")) {
-      return token;
+    const content = stdout.trim();
+
+    // The keychain stores JSON with structure: {"claudeAiOauth":{"accessToken":"..."}}
+    if (content.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(content);
+        if (parsed.claudeAiOauth && typeof parsed.claudeAiOauth === "object") {
+          const token = parsed.claudeAiOauth.accessToken;
+          if (token && typeof token === "string" && token.startsWith("sk-ant-oat")) {
+            debug("Found OAuth token in macOS Keychain under claudeAiOauth.accessToken");
+            return token;
+          }
+        }
+      } catch (parseError) {
+        debug("Failed to parse keychain JSON:", parseError);
+      }
+    }
+
+    // Fallback: check if it's a raw token
+    if (content.startsWith("sk-ant-oat")) {
+      return content;
     }
   } catch (error) {
     debug("macOS Keychain retrieval failed:", error);
