@@ -30,3 +30,4 @@ coverage/
 
 # Config (may contain sensitive paths)
 .claude-limitline.json
+CLAUDE.local.md
