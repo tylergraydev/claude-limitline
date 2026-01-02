@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Demo script to showcase the three weekly view modes
+ * Demo script to showcase weekly view modes and block segment features
  * Outputs raw ANSI-styled text to demonstrate the modes
  */
 
@@ -42,12 +42,12 @@ function segment(text, color, nextColor = null) {
   return out + ansi.reset;
 }
 
-function renderStatusline(weeklyText, weeklyColor = colors.weekly) {
+function renderStatusline(weeklyText, weeklyColor = colors.weekly, blockText = ` ${symbols.block} 29% (3h) `) {
   return (
     segment(` claude-limitline `, colors.directory, colors.git) +
     segment(` ${symbols.branch} main `, colors.git, colors.model) +
     segment(` ${symbols.model} Opus 4.5 `, colors.model, colors.block) +
-    segment(` ${symbols.block} 29% (3h) `, colors.block, weeklyColor) +
+    segment(blockText, colors.block, weeklyColor) +
     segment(weeklyText, weeklyColor)
   );
 }
@@ -86,3 +86,50 @@ console.log("\n");
 console.log("─".repeat(62));
 console.log("Note: Model-specific limits (Opus/Sonnet) are only available");
 console.log("on certain subscription tiers.\n");
+
+// ============================================
+// Block Segment Features
+// ============================================
+
+console.log("\n┌─────────────────────────────────────────────────────────────┐");
+console.log("│              Block Segment Features                         │");
+console.log("└─────────────────────────────────────────────────────────────┘\n");
+
+// Time remaining (default)
+console.log('\x1b[1mTime Remaining\x1b[0m (default):');
+console.log('Shows time until block resets');
+console.log('Config: { "block": { "timeDisplay": "remaining" } }\n');
+console.log(renderStatusline(` ${symbols.weekly} 47% (wk 85%) `, colors.weekly, ` ${symbols.block} 29% (3h20m) `));
+console.log("\n");
+
+// Absolute time - 12h format
+console.log('\x1b[1mAbsolute Time (12-hour)\x1b[0m:');
+console.log('Shows exact reset time in 12-hour format');
+console.log('Config: { "block": { "timeDisplay": "absolute", "timeFormat": "12h" } }\n');
+console.log(renderStatusline(` ${symbols.weekly} 47% (wk 85%) `, colors.weekly, ` ${symbols.block} 29% (2:30pm) `));
+console.log("\n");
+
+// Absolute time - 24h format
+console.log('\x1b[1mAbsolute Time (24-hour)\x1b[0m:');
+console.log('Shows exact reset time in 24-hour format');
+console.log('Config: { "block": { "timeDisplay": "absolute", "timeFormat": "24h" } }\n');
+console.log(renderStatusline(` ${symbols.weekly} 47% (wk 85%) `, colors.weekly, ` ${symbols.block} 29% (14:30) `));
+console.log("\n");
+
+// Sparkline
+console.log('\x1b[1mSparkline History\x1b[0m:');
+console.log('Shows usage trend over last 24 hours');
+console.log('Config: { "block": { "showSparkline": true, "sparklineWidth": 8 } }\n');
+console.log(renderStatusline(` ${symbols.weekly} 47% (wk 85%) `, colors.weekly, ` ${symbols.block} 29% ▁▂▂▃▄▅▆▇ (3h) `));
+console.log("\n");
+
+// Sparkline with absolute time
+console.log('\x1b[1mSparkline + Absolute Time\x1b[0m:');
+console.log('Combine sparkline with absolute reset time');
+console.log('Config: { "block": { "showSparkline": true, "timeDisplay": "absolute" } }\n');
+console.log(renderStatusline(` ${symbols.weekly} 47% (wk 85%) `, colors.weekly, ` ${symbols.block} 29% ▁▂▂▃▄▅▆▇ (2:30pm) `));
+console.log("\n");
+
+console.log("─".repeat(62));
+console.log("Sparkline characters: ▁▂▃▄▅▆▇█ (low to high usage)");
+console.log("History stored in: ~/.claude/limitline-history.json\n");
