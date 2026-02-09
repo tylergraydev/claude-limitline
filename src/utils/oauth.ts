@@ -111,35 +111,74 @@ async function getOAuthTokenWindows(): Promise<string | null> {
 }
 
 async function getOAuthTokenMacOS(): Promise<string | null> {
-  try {
-    const { stdout } = await execAsync(
-      `security find-generic-password -s "Claude Code-credentials" -w`,
-      { timeout: 5000 }
-    );
-    const content = stdout.trim();
+  // Try macOS Keychain first (try multiple service names for compatibility)
+  const keychainServiceNames = ["Claude Code-credentials", "Claude Code"];
+  for (const serviceName of keychainServiceNames) {
+    try {
+      const { stdout } = await execAsync(
+        `security find-generic-password -s "${serviceName}" -w`,
+        { timeout: 5000 }
+      );
+      const content = stdout.trim();
 
-    // The keychain stores JSON with structure: {"claudeAiOauth":{"accessToken":"..."}}
-    if (content.startsWith("{")) {
-      try {
-        const parsed = JSON.parse(content);
-        if (parsed.claudeAiOauth && typeof parsed.claudeAiOauth === "object") {
-          const token = parsed.claudeAiOauth.accessToken;
+      // The keychain may store JSON with structure: {"claudeAiOauth":{"accessToken":"..."}}
+      if (content.startsWith("{")) {
+        try {
+          const parsed = JSON.parse(content);
+          if (parsed.claudeAiOauth && typeof parsed.claudeAiOauth === "object") {
+            const token = parsed.claudeAiOauth.accessToken;
+            if (token && typeof token === "string" && token.startsWith("sk-ant-oat")) {
+              debug(`Found OAuth token in macOS Keychain (${serviceName}) under claudeAiOauth.accessToken`);
+              return token;
+            }
+          }
+        } catch (parseError) {
+          debug("Failed to parse keychain JSON:", parseError);
+        }
+      }
+
+      // Fallback: check if it's a raw token
+      if (content.startsWith("sk-ant-oat")) {
+        debug(`Found OAuth token in macOS Keychain (${serviceName})`);
+        return content;
+      }
+    } catch (error) {
+      debug(`macOS Keychain retrieval failed for service "${serviceName}":`, error);
+    }
+  }
+
+  // Fall back to credential files when Keychain entry is missing
+  const configPaths = [
+    path.join(os.homedir(), ".claude", ".credentials.json"),
+    path.join(os.homedir(), ".claude", "credentials.json"),
+    path.join(os.homedir(), ".config", "claude-code", "credentials.json"),
+  ];
+
+  for (const configPath of configPaths) {
+    try {
+      if (fs.existsSync(configPath)) {
+        const content = fs.readFileSync(configPath, "utf-8");
+        const config = JSON.parse(content);
+
+        if (config.claudeAiOauth && typeof config.claudeAiOauth === "object") {
+          const token = config.claudeAiOauth.accessToken;
           if (token && typeof token === "string" && token.startsWith("sk-ant-oat")) {
-            debug("Found OAuth token in macOS Keychain under claudeAiOauth.accessToken");
+            debug(`Found OAuth token in ${configPath} under claudeAiOauth.accessToken`);
             return token;
           }
         }
-      } catch (parseError) {
-        debug("Failed to parse keychain JSON:", parseError);
-      }
-    }
 
-    // Fallback: check if it's a raw token
-    if (content.startsWith("sk-ant-oat")) {
-      return content;
+        for (const key of ["oauth_token", "token", "accessToken"]) {
+          const token = config[key];
+          if (token && typeof token === "string" && token.startsWith("sk-ant-oat")) {
+            debug(`Found OAuth token in ${configPath} under key ${key}`);
+            return token;
+          }
+        }
+      }
+    } catch (error) {
+      debug(`Failed to read config from ${configPath}:`, error);
     }
-  } catch (error) {
-    debug("macOS Keychain retrieval failed:", error);
   }
 
   return null;
