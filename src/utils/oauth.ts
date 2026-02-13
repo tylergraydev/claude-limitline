@@ -110,36 +110,79 @@ async function getOAuthTokenWindows(): Promise<string | null> {
   return null;
 }
 
-async function getOAuthTokenMacOS(): Promise<string | null> {
+async function findKeychainServiceName(): Promise<string> {
+  // Claude Code may use a hash-suffixed keychain service name (e.g. "Claude Code-credentials-697375ae").
+  // Find the most specific (longest) matching entry to prefer the suffixed variant over the legacy name.
   try {
     const { stdout } = await execAsync(
-      `security find-generic-password -s "Claude Code-credentials" -w`,
+      `security dump-keychain 2>/dev/null | grep -o '"Claude Code-credentials[^"]*"' | awk '{ print length, $0 }' | sort -rn | head -1 | cut -d' ' -f2-`,
       { timeout: 5000 }
     );
-    const content = stdout.trim();
-
-    // The keychain stores JSON with structure: {"claudeAiOauth":{"accessToken":"..."}}
-    if (content.startsWith("{")) {
-      try {
-        const parsed = JSON.parse(content);
-        if (parsed.claudeAiOauth && typeof parsed.claudeAiOauth === "object") {
-          const token = parsed.claudeAiOauth.accessToken;
-          if (token && typeof token === "string" && token.startsWith("sk-ant-oat")) {
-            debug("Found OAuth token in macOS Keychain under claudeAiOauth.accessToken");
-            return token;
-          }
-        }
-      } catch (parseError) {
-        debug("Failed to parse keychain JSON:", parseError);
-      }
-    }
-
-    // Fallback: check if it's a raw token
-    if (content.startsWith("sk-ant-oat")) {
-      return content;
+    const svcName = stdout.trim().replace(/^"|"$/g, "");
+    if (svcName) {
+      debug(`Found keychain service: ${svcName}`);
+      return svcName;
     }
   } catch (error) {
-    debug("macOS Keychain retrieval failed:", error);
+    debug("Keychain service name lookup failed:", error);
+  }
+  return "Claude Code-credentials";
+}
+
+async function readKeychainContent(serviceName: string): Promise<string | null> {
+  try {
+    const { stdout } = await execAsync(
+      `security find-generic-password -s "${serviceName}" -w`,
+      { timeout: 5000 }
+    );
+    return stdout.trim() || null;
+  } catch (error) {
+    debug(`Keychain read failed for service "${serviceName}":`, error);
+    return null;
+  }
+}
+
+function extractTokenFromKeychainContent(content: string): string | null {
+  // The keychain stores JSON with structure: {"claudeAiOauth":{"accessToken":"..."}}
+  if (content.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(content);
+      if (parsed.claudeAiOauth && typeof parsed.claudeAiOauth === "object") {
+        const token = parsed.claudeAiOauth.accessToken;
+        if (token && typeof token === "string" && token.startsWith("sk-ant-oat")) {
+          debug("Found OAuth token in macOS Keychain under claudeAiOauth.accessToken");
+          return token;
+        }
+      }
+    } catch (parseError) {
+      debug("Failed to parse keychain JSON:", parseError);
+    }
+  }
+
+  // Fallback: check if it's a raw token
+  if (content.startsWith("sk-ant-oat")) {
+    return content;
+  }
+
+  return null;
+}
+
+async function getOAuthTokenMacOS(): Promise<string | null> {
+  const serviceName = await findKeychainServiceName();
+  const content = await readKeychainContent(serviceName);
+
+  if (content) {
+    const token = extractTokenFromKeychainContent(content);
+    if (token) return token;
+  }
+
+  // If the dynamic lookup returned a suffixed name that failed, try the legacy name as fallback
+  if (serviceName !== "Claude Code-credentials") {
+    debug("Suffixed keychain entry failed, trying legacy name");
+    const legacyContent = await readKeychainContent("Claude Code-credentials");
+    if (legacyContent) {
+      return extractTokenFromKeychainContent(legacyContent);
+    }
   }
 
   return null;
