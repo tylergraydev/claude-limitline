@@ -142,6 +142,42 @@ async function getOAuthTokenMacOS(): Promise<string | null> {
     debug("macOS Keychain retrieval failed:", error);
   }
 
+  // Fallback to config file locations (same as Linux)
+  const configPaths = [
+    path.join(os.homedir(), ".claude", ".credentials.json"),
+    path.join(os.homedir(), ".claude", "credentials.json"),
+    path.join(os.homedir(), ".config", "claude-code", "credentials.json"),
+  ];
+
+  for (const configPath of configPaths) {
+    try {
+      if (fs.existsSync(configPath)) {
+        const content = fs.readFileSync(configPath, "utf-8");
+        const config = JSON.parse(content);
+
+        // Check for claudeAiOauth.accessToken structure
+        if (config.claudeAiOauth && typeof config.claudeAiOauth === "object") {
+          const token = config.claudeAiOauth.accessToken;
+          if (token && typeof token === "string" && token.startsWith("sk-ant-oat")) {
+            debug(`Found OAuth token in ${configPath} under claudeAiOauth.accessToken`);
+            return token;
+          }
+        }
+
+        // Check for direct token fields
+        for (const key of ["oauth_token", "token", "accessToken"]) {
+          const token = config[key];
+          if (token && typeof token === "string" && token.startsWith("sk-ant-oat")) {
+            debug(`Found OAuth token in ${configPath} under key ${key}`);
+            return token;
+          }
+        }
+      }
+    } catch (error) {
+      debug(`Failed to read config from ${configPath}:`, error);
+    }
+  }
+
   return null;
 }
 
