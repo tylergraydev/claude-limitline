@@ -110,36 +110,69 @@ async function getOAuthTokenWindows(): Promise<string | null> {
   return null;
 }
 
-async function getOAuthTokenMacOS(): Promise<string | null> {
+// Discover the correct Keychain service name. Claude Code may use a hash-suffixed
+// name (e.g. "Claude Code-credentials-697375ae") instead of the legacy "Claude Code-credentials".
+async function findKeychainServiceName(): Promise<string> {
   try {
     const { stdout } = await execAsync(
-      `security find-generic-password -s "Claude Code-credentials" -w`,
+      `security dump-keychain 2>/dev/null | grep -o '"Claude Code-credentials[^"]*"'`,
       { timeout: 5000 }
     );
-    const content = stdout.trim();
-
-    // The keychain stores JSON with structure: {"claudeAiOauth":{"accessToken":"..."}}
-    if (content.startsWith("{")) {
-      try {
-        const parsed = JSON.parse(content);
-        if (parsed.claudeAiOauth && typeof parsed.claudeAiOauth === "object") {
-          const token = parsed.claudeAiOauth.accessToken;
-          if (token && typeof token === "string" && token.startsWith("sk-ant-oat")) {
-            debug("Found OAuth token in macOS Keychain under claudeAiOauth.accessToken");
-            return token;
-          }
-        }
-      } catch (parseError) {
-        debug("Failed to parse keychain JSON:", parseError);
-      }
-    }
-
-    // Fallback: check if it's a raw token
-    if (content.startsWith("sk-ant-oat")) {
-      return content;
+    // Pick the longest match — the hash-suffixed variant is more specific than the legacy name
+    const matches = stdout
+      .trim()
+      .split("\n")
+      .map((s) => s.replace(/^"|"$/g, ""))
+      .filter(Boolean)
+      .sort((a, b) => b.length - a.length);
+    if (matches.length > 0) {
+      debug(`Found keychain service: ${matches[0]}`);
+      return matches[0];
     }
   } catch (error) {
-    debug("macOS Keychain retrieval failed:", error);
+    debug("Keychain service name lookup failed:", error);
+  }
+  return "Claude Code-credentials";
+}
+
+function extractTokenFromKeychainContent(content: string): string | null {
+  if (content.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(content);
+      if (parsed.claudeAiOauth && typeof parsed.claudeAiOauth === "object") {
+        const token = parsed.claudeAiOauth.accessToken;
+        if (token && typeof token === "string" && token.startsWith("sk-ant-oat")) {
+          return token;
+        }
+      }
+    } catch (parseError) {
+      debug("Failed to parse keychain JSON:", parseError);
+    }
+  }
+  if (content.startsWith("sk-ant-oat")) {
+    return content;
+  }
+  return null;
+}
+
+async function getOAuthTokenMacOS(): Promise<string | null> {
+  // Discover the correct service name (handles hash-suffixed entries)
+  const serviceName = await findKeychainServiceName();
+
+  for (const name of [serviceName, "Claude Code-credentials"]) {
+    try {
+      const { stdout } = await execAsync(
+        `security find-generic-password -s "${name}" -w`,
+        { timeout: 5000 }
+      );
+      const token = extractTokenFromKeychainContent(stdout.trim());
+      if (token) {
+        debug(`Found OAuth token in macOS Keychain (${name})`);
+        return token;
+      }
+    } catch (error) {
+      debug(`macOS Keychain retrieval failed for "${name}":`, error);
+    }
   }
 
   // Fallback to config file locations (same as Linux)
