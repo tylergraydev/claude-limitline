@@ -16,6 +16,9 @@ vi.mock("node:fs", () => ({
   default: {
     existsSync: vi.fn(),
     readFileSync: vi.fn(),
+    writeFileSync: vi.fn(),
+    unlinkSync: vi.fn(),
+    mkdirSync: vi.fn(),
   },
 }));
 

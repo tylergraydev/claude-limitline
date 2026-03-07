@@ -330,10 +330,70 @@ export async function fetchUsageFromAPI(
   }
 }
 
-// Cache for API responses to avoid hitting rate limits
-let cachedUsage: OAuthUsageResponse | null = null;
-let previousUsage: OAuthUsageResponse | null = null;  // For trend tracking
-let cacheTimestamp = 0;
+// Disk-based cache for API responses to survive across process invocations
+const USAGE_CACHE_FILE = "limitline-usage-cache.json";
+
+interface DiskCache {
+  timestamp: number;
+  usage: OAuthUsageResponse | null;
+  previousUsage: OAuthUsageResponse | null;
+}
+
+function getCachePath(): string {
+  return path.join(os.homedir(), ".claude", USAGE_CACHE_FILE);
+}
+
+function loadDiskCache(): DiskCache | null {
+  try {
+    const cachePath = getCachePath();
+    if (fs.existsSync(cachePath)) {
+      const content = fs.readFileSync(cachePath, "utf-8");
+      const data = JSON.parse(content) as DiskCache;
+      // Rehydrate Date objects in UsageData
+      const rehydrate = (usage: OAuthUsageResponse | null): OAuthUsageResponse | null => {
+        if (!usage) return null;
+        const fix = (ud: UsageData | null): UsageData | null => {
+          if (!ud) return null;
+          return { ...ud, resetAt: new Date(ud.resetAt) };
+        };
+        return {
+          ...usage,
+          fiveHour: fix(usage.fiveHour),
+          sevenDay: fix(usage.sevenDay),
+          sevenDayOpus: fix(usage.sevenDayOpus),
+          sevenDaySonnet: fix(usage.sevenDaySonnet),
+        };
+      };
+      return {
+        timestamp: data.timestamp,
+        usage: rehydrate(data.usage),
+        previousUsage: rehydrate(data.previousUsage),
+      };
+    }
+  } catch (error) {
+    debug("Failed to load usage cache from disk:", error);
+  }
+  return null;
+}
+
+function saveDiskCache(cache: DiskCache): void {
+  try {
+    const cachePath = getCachePath();
+    const dir = path.dirname(cachePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(cachePath, JSON.stringify(cache));
+  } catch (error) {
+    debug("Failed to save usage cache to disk:", error);
+  }
+}
+
+// Initialize in-memory cache from disk
+const diskCache = loadDiskCache();
+let cachedUsage: OAuthUsageResponse | null = diskCache?.usage ?? null;
+let previousUsage: OAuthUsageResponse | null = diskCache?.previousUsage ?? null;
+let cacheTimestamp = diskCache?.timestamp ?? 0;
 let cachedToken: string | null = null;
 
 export type TrendDirection = "up" | "down" | "same" | null;
@@ -405,6 +465,7 @@ export async function getRealtimeUsage(
     previousUsage = cachedUsage;
     cachedUsage = usage;
     cacheTimestamp = now;
+    saveDiskCache({ timestamp: now, usage: cachedUsage, previousUsage });
     debug("Refreshed realtime usage cache");
   } else {
     // Token might be expired, clear it for retry next time
@@ -419,4 +480,12 @@ export function clearUsageCache(): void {
   previousUsage = null;
   cacheTimestamp = 0;
   cachedToken = null;
+  try {
+    const cachePath = getCachePath();
+    if (fs.existsSync(cachePath)) {
+      fs.unlinkSync(cachePath);
+    }
+  } catch (error) {
+    debug("Failed to delete usage cache file:", error);
+  }
 }
